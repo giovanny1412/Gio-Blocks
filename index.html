@@ -9,14 +9,25 @@
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
     h2 { color: #333; margin-bottom: 10px; }
-    #blocklyDiv { height: 520px; width: 100%; border: 2px solid #00979D; border-radius: 8px; background: #fff; }
+    #blocklyDiv { height: 480px; width: 100%; border: 2px solid #00979D; border-radius: 8px; background: #fff; }
     .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #00979D; color: white; border: none; border-radius: 6px; font-weight: bold; transition: background 0.2s; }
-    button:hover { background: #007a82; }
-    #codeArea { width: 100%; height: 280px; font-family: 'Fira Code', 'Courier New', monospace; font-size: 14px; margin-top: 15px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: #1e1e1e; color: #d4d4d4; resize: vertical; }
+    button { padding: 12px 20px; font-size: 15px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: all 0.2s; }
+    button:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .btn-generar { background: #00979D; color: white; }
+    .btn-generar:hover { background: #007a82; }
+    .btn-descargar { background: #6c757d; color: white; }
+    .btn-descargar:hover { background: #5a6268; }
+    .btn-subir { background: #28a745; color: white; }
+    .btn-subir:hover { background: #218838; }
+    .btn-subir:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+    #codeArea { width: 100%; height: 200px; font-family: 'Fira Code', 'Courier New', monospace; font-size: 13px; margin-top: 12px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: #1e1e1e; color: #d4d4d4; resize: vertical; }
     .hint { color: #666; font-size: 13px; }
-    .error { color: #ff6b6b; font-weight: bold; }
-    .success { color: #51cf66; font-weight: bold; }
+    #statusArea { margin-top: 10px; padding: 10px 14px; border-radius: 6px; font-size: 14px; display: none; align-items: center; gap: 8px; }
+    .status-ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: flex !important; }
+    .status-err { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: flex !important; }
+    .status-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; display: flex !important; }
+    .spinner { width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #00979D; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 <base target="_blank">
 </head>
@@ -62,11 +73,13 @@
   </xml>
 
   <div class="controls">
-    <button onclick="generarCodigo()">⚙️ Generar Código Arduino</button>
-    <button onclick="descargarCodigo()">💾 Descargar .ino</button>
-    <span class="hint">Arrastra bloques al área de trabajo y conéctalos al bloque "Arduino Nano"</span>
+    <button class="btn-generar" onclick="generarCodigo()">⚙️ Generar Código</button>
+    <button class="btn-descargar" onclick="descargarCodigo()">💾 Descargar .ino</button>
+    <button class="btn-subir" id="btnSubir" onclick="subirAAduino()">📤 Subir a Arduino</button>
+    <span class="hint">Conecta el Nano y ejecuta <code>agente_local.py</code> para subir directo</span>
   </div>
 
+  <div id="statusArea"></div>
   <textarea id="codeArea" placeholder="El código Arduino aparecerá aquí..."></textarea>
 
   <script>
@@ -436,16 +449,20 @@
       try {
         const code = Blockly.Arduino.workspaceToCode(workspace);
         document.getElementById('codeArea').value = code;
+        showStatus('Código generado correctamente.', 'info');
+        return code;
       } catch (e) {
-        document.getElementById('codeArea').value = '❌ ERROR: ' + e.message + '\n\nRevisa la consola (F12) para más detalles.';
+        document.getElementById('codeArea').value = '❌ ERROR: ' + e.message;
+        showStatus('Error al generar código. Revisa la consola (F12).', 'err');
         console.error(e);
+        return null;
       }
     }
 
     function descargarCodigo() {
       const code = document.getElementById('codeArea').value;
       if (!code || code.startsWith('❌')) {
-        alert('Primero genera el código.');
+        showStatus('Primero genera el código.', 'err');
         return;
       }
       const blob = new Blob([code], { type: 'text/plain' });
@@ -453,6 +470,52 @@
       a.href = URL.createObjectURL(blob);
       a.download = 'sketch_arduino.ino';
       a.click();
+      showStatus('Archivo descargado.', 'ok');
+    }
+
+    async function subirAAduino() {
+      const code = generarCodigo();
+      if (!code) return;
+
+      const btn = document.getElementById('btnSubir');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Subiendo...';
+      showStatus('Conectando con el agente local...', 'info');
+
+      try {
+        const response = await fetch('http://localhost:5000/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showStatus('✅ ' + result.message, 'ok');
+        } else {
+          showStatus('❌ ' + result.error, 'err');
+        }
+      } catch (err) {
+        showStatus(
+          '❌ No se pudo conectar con el agente local.\n' +
+          'Asegúrate de ejecutar: python agente_local.py',
+          'err'
+        );
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById('statusArea');
+      el.textContent = msg;
+      el.className = '';
+      if (type === 'ok') el.classList.add('status-ok');
+      else if (type === 'err') el.classList.add('status-err');
+      else el.classList.add('status-info');
     }
   </script>
 </body>
