@@ -1,297 +1,105 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloques para Arduino Nano</title>
-    <!-- Cargar Blockly desde CDN -->
-    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 15px;
-            background-color: #f4f4f9;
-            display: flex;
-            flex-direction: column;
-            height: 95vh;
-            box-sizing: border-box;
-        }
-        h1 { color: #333; font-size: 20px; margin: 0 0 5px 0; }
-        p { color: #666; margin: 0 0 10px 0; font-size: 14px; }
-        
-        .main-container {
-            display: flex;
-            flex: 1;
-            position: relative;
-            gap: 10px;
-        }
-        #blocklyDiv {
-            flex: 1;
-            height: 100%;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            border-radius: 4px;
-        }
-        
-        #codePanel {
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: 420px;
-            height: 100%;
-            background-color: #1e1e1e;
-            color: #dcdcdc;
-            box-shadow: -4px 0 10px rgba(0,0,0,0.2);
-            transition: transform 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            border-radius: 4px;
-            z-index: 10;
-        }
-        #codePanel.closed {
-            transform: translateX(105%);
-        }
-        .code-header {
-            background-color: #2d2d2d;
-            padding: 10px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #444;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        #codeDiv {
-            flex: 1;
-            padding: 15px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            overflow-y: auto;
-            font-size: 13px;
-            margin: 0;
-        }
-        
-        .controls {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            font-size: 14px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        button.secondary {
-            background-color: #6c757d;
-        }
-        button.secondary:hover {
-            background-color: #5a6268;
-        }
-        button.success {
-            background-color: #28a745;
-        }
-        button.success:hover {
-            background-color: #218838;
-        }
-        #serialStatus {
-            font-size: 13px;
-            font-weight: bold;
-            color: #555;
-            margin-left: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Blockly Arduino Nano</title>
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly/msg/es.js"></script>
+  <style>
+    #blocklyDiv { height: 480px; width: 100%; }
+    #codeArea { width: 100%; height: 200px; font-family: monospace; }
+  </style>
 </head>
 <body>
+  <h2>Programa tu Arduino Nano con Bloques</h2>
+  
+  <div id="blocklyDiv"></div>
+  <xml id="toolbox" style="display: none">
+    <category name="Lógica" colour="210">
+      <block type="controls_if"></block>
+      <block type="logic_compare"></block>
+    </category>
+    <category name="Bucles" colour="120">
+      <block type="controls_repeat_ext"></block>
+      <block type="controls_whileUntil"></block>
+    </category>
+    <category name="Arduino" colour="0">
+      <block type="arduino_setup_loop"></block>
+      <block type="arduino_digital_write"></block>
+      <block type="arduino_delay"></block>
+    </category>
+  </xml>
+  
+  <button onclick="generarCodigo()">Generar Código Arduino</button>
+  <textarea id="codeArea" readonly></textarea>
 
-    <h1>Generador de Bloques para Arduino Nano</h1>
-    <p>Ensambla tus bloques dentro de Setup y Loop para ver el C++ generado en tiempo real.</p>
+  <script>
+    // Inicializar Blockly
+    const workspace = Blockly.inject('blocklyDiv', {
+      toolbox: document.getElementById('toolbox'),
+      trashcan: true,
+      zoom: { controls: true }
+    });
 
-    <div class="main-container">
-        <div id="blocklyDiv"></div>
+    // Definir bloques personalizados para Arduino
+    Blockly.Blocks['arduino_setup_loop'] = {
+      init: function() {
+        this.appendDummyInput().appendField("Arduino Nano");
+        this.appendStatementInput("SETUP").setCheck(null).appendField("setup");
+        this.appendStatementInput("LOOP").setCheck(null).appendField("loop");
+        this.setColour(0);
+        this.setTooltip("Estructura básica de Arduino");
+      }
+    };
 
-        <div id="codePanel" class="closed">
-            <div class="code-header">
-                <span>Código C++ (Arduino Nano)</span>
-                <button class="secondary" onclick="toggleCodePanel()" style="padding: 2px 8px; font-size: 12px;">✕ Cerrar</button>
-            </div>
-            <pre id="codeDiv">// Conecta bloques en SETUP o LOOP para ver el código...</pre>
-        </div>
-    </div>
+    Blockly.Blocks['arduino_digital_write'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("DigitalWrite pin")
+            .appendField(new Blockly.FieldNumber(13, 0, 19), "PIN")
+            .appendField(new Blockly.FieldDropdown([["HIGH","HIGH"],["LOW","LOW"]]), "STATE");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(0);
+      }
+    };
 
-    <div class="controls">
-        <button onclick="downloadCode()">Descargar Archivo .ino</button>
-        <button class="secondary" onclick="toggleCodePanel()">Ver / Ocultar Código C++</button>
-        <button class="success" onclick="conectarSerialNano()">Conectar Arduino Nano (Web Serial)</button>
-        <span id="serialStatus">Estado: Desconectado</span>
-    </div>
+    Blockly.Blocks['arduino_delay'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("delay")
+            .appendField(new Blockly.FieldNumber(1000, 0), "MS")
+            .appendField("ms");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(0);
+      }
+    };
 
-    <xml id="toolbox" style="display: none">
-        <block type="arduino_setup"></block>
-        <block type="arduino_loop"></block>
-        <block type="pin_mode"></block>
-        <block type="digital_write"></block>
-        <block type="delay_ms"></block>
-    </xml>
+    // Generadores de código (CRÍTICO: sin esto no genera código)
+    Blockly.Arduino = new Blockly.Generator('Arduino');
 
-    <script>
-        const pinesDisponibles = [
-            ["D0", "0"], ["D1", "1"], ["D2", "2"], ["D3", "3"], 
-            ["D4", "4"], ["D5", "5"], ["D6", "6"], ["D7", "7"], 
-            ["D8", "8"], ["D9", "9"], ["D10", "10"], ["D11", "11"], 
-            ["D12", "12"], ["D13", "13"]
-        ];
+    Blockly.Arduino['arduino_setup_loop'] = function(block) {
+      var setupCode = Blockly.Arduino.statementToCode(block, 'SETUP');
+      var loopCode = Blockly.Arduino.statementToCode(block, 'LOOP');
+      return 'void setup() {\n' + setupCode + '}\n\nvoid loop() {\n' + loopCode + '}\n';
+    };
 
-        Blockly.Blocks['arduino_setup'] = {
-            init: function() {
-                this.appendDummyInput().appendField("SETUP (Configuración inicial)");
-                this.appendStatementInput("STACK").setCheck(null);
-                this.setColour(210);
-            }
-        };
+    Blockly.Arduino['arduino_digital_write'] = function(block) {
+      var pin = block.getFieldValue('PIN');
+      var state = block.getFieldValue('STATE');
+      return 'digitalWrite(' + pin + ', ' + state + ');\n';
+    };
 
-        Blockly.Blocks['arduino_loop'] = {
-            init: function() {
-                this.appendDummyInput().appendField("LOOP (Bucle principal)");
-                this.appendStatementInput("STACK").setCheck(null);
-                this.setColour(160);
-            }
-        };
+    Blockly.Arduino['arduino_delay'] = function(block) {
+      var ms = block.getFieldValue('MS');
+      return 'delay(' + ms + ');\n';
+    };
 
-        Blockly.Blocks['pin_mode'] = {
-            init: function() {
-                this.appendDummyInput()
-                    .appendField("Configurar Pin")
-                    .appendField(new Blockly.FieldDropdown(pinesDisponibles), "PIN")
-                    .appendField("como")
-                    .appendField(new Blockly.FieldDropdown([["SALIDA (OUTPUT)", "OUTPUT"], ["ENTRADA (INPUT)", "INPUT"]]), "MODE");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour(230);
-            }
-        };
-
-        Blockly.Blocks['digital_write'] = {
-            init: function() {
-                this.appendDummyInput()
-                    .appendField("Escribir en Pin")
-                    .appendField(new Blockly.FieldDropdown(pinesDisponibles), "PIN")
-                    .appendField("estado")
-                    .appendField(new Blockly.FieldDropdown([["HIGH (Encendido)", "HIGH"], ["LOW (Apagado)", "LOW"]]), "STATE");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour(230);
-            }
-        };
-
-        Blockly.Blocks['delay_ms'] = {
-            init: function() {
-                this.appendDummyInput()
-                    .appendField("Esperar (ms)")
-                    .appendField(new Blockly.FieldNumber(1000, 0), "TIME");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour(290);
-            }
-        };
-
-        Blockly.JavaScript['arduino_setup'] = function(block) {
-            var branch = Blockly.JavaScript.statementToCode(block, 'STACK');
-            return branch;
-        };
-
-        Blockly.JavaScript['arduino_loop'] = function(block) {
-            var branch = Blockly.JavaScript.statementToCode(block, 'STACK');
-            return branch;
-        };
-
-        Blockly.JavaScript['pin_mode'] = function(block) {
-            return '  pinMode(' + block.getFieldValue('PIN') + ', ' + block.getFieldValue('MODE') + ');\n';
-        };
-
-        Blockly.JavaScript['digital_write'] = function(block) {
-            return '  digitalWrite(' + block.getFieldValue('PIN') + ', ' + block.getFieldValue('STATE') + ');\n';
-        };
-
-        Blockly.JavaScript['delay_ms'] = function(block) {
-            return '  delay(' + block.getFieldValue('TIME') + ');\n';
-        };
-
-        var demoWorkspace = Blockly.inject('blocklyDiv', {
-            toolbox: document.getElementById('toolbox'),
-            trashcan: true
-        });
-
-        // Función corregida para rastrear bloques dentro de contenedores Setup y Loop
-        function myUpdateCode(event) {
-            let setupCode = "";
-            let loopCode = "";
-
-            var topBlocks = demoWorkspace.getTopBlocks(true);
-            for (var i = 0; i < topBlocks.length; i++) {
-                var block = topBlocks[i];
-                if (block.type === 'arduino_setup') {
-                    setupCode = Blockly.JavaScript.statementToCode(block, 'STACK');
-                } else if (block.type === 'arduino_loop') {
-                    loopCode = Blockly.JavaScript.statementToCode(block, 'STACK');
-                }
-            }
-
-            var finalCode = `#include <Arduino.h>\n\n` +
-                            `void setup() {\n` + (setupCode || "") + `}\n\n` +
-                            `void loop() {\n` + (loopCode || "") + `}\n`;
-
-            document.getElementById('codeDiv').innerText = finalCode;
-        }
-
-        demoWorkspace.addChangeListener(myUpdateCode);
-        myUpdateCode();
-
-        function toggleCodePanel() {
-            var panel = document.getElementById('codePanel');
-            panel.classList.toggle('closed');
-        }
-
-        function downloadCode() {
-            var codeText = document.getElementById('codeDiv').innerText;
-            var element = document.createElement('a');
-            var file = new Blob([codeText], {type: 'text/plain'});
-            element.href = URL.createObjectURL(file);
-            element.download = "arduino_nano_project.ino";
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
-        }
-
-        let puertoSerial = null;
-
-        async function conectarSerialNano() {
-            if (!("serial" in navigator)) {
-                alert("Tu navegador no soporta Web Serial API. Usa Google Chrome o Microsoft Edge.");
-                return;
-            }
-
-            try {
-                puertoSerial = await navigator.serial.requestPort();
-                await puertoSerial.open({ baudRate: 9600 });
-                
-                document.getElementById('serialStatus').innerText = "Estado: Conectado al Nano";
-                document.getElementById('serialStatus').style.color = "green";
-            } catch (error) {
-                console.error("Error al conectar puerto serial:", error);
-                document.getElementById('serialStatus').innerText = "Estado: Error de conexión";
-                document.getElementById('serialStatus').style.color = "red";
-            }
-        }
-    </script>
+    function generarCodigo() {
+      var code = Blockly.Arduino.workspaceToCode(workspace);
+      document.getElementById('codeArea').value = code;
+    }
+  </script>
 </body>
 </html>
