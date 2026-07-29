@@ -3,17 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <title>Blockly Arduino Nano</title>
-  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-  <script src="https://unpkg.com/blockly/msg/es.js"></script>
+  <script src="https://unpkg.com/blockly@10.4.3/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly@10.4.3/msg/es.js"></script>
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
     h2 { color: #333; margin-bottom: 10px; }
     #blocklyDiv { height: 520px; width: 100%; border: 2px solid #00979D; border-radius: 8px; background: #fff; }
-    .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; }
+    .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #00979D; color: white; border: none; border-radius: 6px; font-weight: bold; transition: background 0.2s; }
     button:hover { background: #007a82; }
-    #codeArea { width: 100%; height: 280px; font-family: 'Fira Code', 'Courier New', monospace; font-size: 14px; margin-top: 15px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: #1e1e1e; color: #d4d4d4; resize: vertical; box-sizing: border-box; }
-    .hint { color: #666; font-size: 13px; margin-top: 5px; }
+    #codeArea { width: 100%; height: 280px; font-family: 'Fira Code', 'Courier New', monospace; font-size: 14px; margin-top: 15px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: #1e1e1e; color: #d4d4d4; resize: vertical; }
+    .hint { color: #666; font-size: 13px; }
+    .error { color: #ff6b6b; font-weight: bold; }
+    .success { color: #51cf66; font-weight: bold; }
   </style>
 <base target="_blank">
 </head>
@@ -200,46 +203,46 @@
     // ============================================
     // 3. CREAR GENERADOR ARDUINO
     // ============================================
-    const arduinoGen = new Blockly.Generator('Arduino');
+    Blockly.Arduino = new Blockly.Generator('Arduino');
 
-    arduinoGen.ORDER_ATOMIC = 0;
-    arduinoGen.ORDER_UNARY_POSTFIX = 1;
-    arduinoGen.ORDER_UNARY_PREFIX = 2;
-    arduinoGen.ORDER_MULTIPLICATIVE = 3;
-    arduinoGen.ORDER_ADDITIVE = 4;
-    arduinoGen.ORDER_SHIFT = 5;
-    arduinoGen.ORDER_RELATIONAL = 6;
-    arduinoGen.ORDER_EQUALITY = 7;
-    arduinoGen.ORDER_BITWISE_AND = 8;
-    arduinoGen.ORDER_BITWISE_XOR = 9;
-    arduinoGen.ORDER_BITWISE_OR = 10;
-    arduinoGen.ORDER_LOGICAL_AND = 11;
-    arduinoGen.ORDER_LOGICAL_OR = 12;
-    arduinoGen.ORDER_CONDITIONAL = 13;
-    arduinoGen.ORDER_ASSIGNMENT = 14;
-    arduinoGen.ORDER_COMMA = 15;
-    arduinoGen.ORDER_NONE = 99;
+    Blockly.Arduino.ORDER_ATOMIC = 0;
+    Blockly.Arduino.ORDER_UNARY_POSTFIX = 1;
+    Blockly.Arduino.ORDER_UNARY_PREFIX = 2;
+    Blockly.Arduino.ORDER_MULTIPLICATIVE = 3;
+    Blockly.Arduino.ORDER_ADDITIVE = 4;
+    Blockly.Arduino.ORDER_SHIFT = 5;
+    Blockly.Arduino.ORDER_RELATIONAL = 6;
+    Blockly.Arduino.ORDER_EQUALITY = 7;
+    Blockly.Arduino.ORDER_BITWISE_AND = 8;
+    Blockly.Arduino.ORDER_BITWISE_XOR = 9;
+    Blockly.Arduino.ORDER_BITWISE_OR = 10;
+    Blockly.Arduino.ORDER_LOGICAL_AND = 11;
+    Blockly.Arduino.ORDER_LOGICAL_OR = 12;
+    Blockly.Arduino.ORDER_CONDITIONAL = 13;
+    Blockly.Arduino.ORDER_ASSIGNMENT = 14;
+    Blockly.Arduino.ORDER_COMMA = 15;
+    Blockly.Arduino.ORDER_NONE = 99;
 
-    arduinoGen.init = function(workspace) {
+    Blockly.Arduino.init = function(workspace) {
       this.definitions_ = Object.create(null);
       this.functionNames_ = Object.create(null);
-      this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
+      this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_ || '');
       this.nameDB_.setVariableMap(workspace.getVariableMap());
       this.nameDB_.populateProcedures(workspace);
     };
 
-    arduinoGen.finish = function(code) {
+    Blockly.Arduino.finish = function(code) {
       const definitions = [];
       for (let name in this.definitions_) {
         definitions.push(this.definitions_[name]);
       }
       this.definitions_ = Object.create(null);
       this.functionNames_ = Object.create(null);
-      this.nameDB_.reset();
+      if (this.nameDB_) this.nameDB_.reset();
       return definitions.join('\n') + '\n' + code;
     };
 
-    arduinoGen.scrub_ = function(block, code, opt_thisOnly) {
+    Blockly.Arduino.scrub_ = function(block, code, opt_thisOnly) {
       const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
       const nextCode = opt_thisOnly ? '' : this.blockToCode(nextBlock);
       return code + nextCode;
@@ -249,57 +252,57 @@
     // 4. GENERADORES DE BLOQUES ARDUINO
     // ============================================
 
-    arduinoGen['arduino_setup_loop'] = function(block) {
-      const setupCode = arduinoGen.statementToCode(block, 'SETUP');
-      const loopCode = arduinoGen.statementToCode(block, 'LOOP');
+    Blockly.Arduino['arduino_setup_loop'] = function(block) {
+      const setupCode = Blockly.Arduino.statementToCode(block, 'SETUP');
+      const loopCode = Blockly.Arduino.statementToCode(block, 'LOOP');
       return 'void setup() {\n' + (setupCode || '  \n') + '}\n\nvoid loop() {\n' + (loopCode || '  \n') + '}\n';
     };
 
-    arduinoGen['arduino_pin_mode'] = function(block) {
+    Blockly.Arduino['arduino_pin_mode'] = function(block) {
       const pin = block.getFieldValue('PIN');
       const mode = block.getFieldValue('MODE');
       return '  pinMode(' + pin + ', ' + mode + ');\n';
     };
 
-    arduinoGen['arduino_digital_write'] = function(block) {
+    Blockly.Arduino['arduino_digital_write'] = function(block) {
       const pin = block.getFieldValue('PIN');
       const state = block.getFieldValue('STATE');
       return '  digitalWrite(' + pin + ', ' + state + ');\n';
     };
 
-    arduinoGen['arduino_digital_read'] = function(block) {
+    Blockly.Arduino['arduino_digital_read'] = function(block) {
       const pin = block.getFieldValue('PIN');
-      return ['digitalRead(' + pin + ')', arduinoGen.ORDER_ATOMIC];
+      return ['digitalRead(' + pin + ')', Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    arduinoGen['arduino_analog_write'] = function(block) {
+    Blockly.Arduino['arduino_analog_write'] = function(block) {
       const pin = block.getFieldValue('PIN');
-      const value = arduinoGen.valueToCode(block, 'VALUE', arduinoGen.ORDER_ATOMIC) || '0';
+      const value = Blockly.Arduino.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_ATOMIC) || '0';
       return '  analogWrite(' + pin + ', ' + value + ');\n';
     };
 
-    arduinoGen['arduino_analog_read'] = function(block) {
+    Blockly.Arduino['arduino_analog_read'] = function(block) {
       const pin = block.getFieldValue('PIN');
-      return ['analogRead(' + pin + ')', arduinoGen.ORDER_ATOMIC];
+      return ['analogRead(' + pin + ')', Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    arduinoGen['arduino_delay'] = function(block) {
-      const ms = arduinoGen.valueToCode(block, 'MS', arduinoGen.ORDER_ATOMIC) || '1000';
+    Blockly.Arduino['arduino_delay'] = function(block) {
+      const ms = Blockly.Arduino.valueToCode(block, 'MS', Blockly.Arduino.ORDER_ATOMIC) || '1000';
       return '  delay(' + ms + ');\n';
     };
 
-    arduinoGen['arduino_serial_begin'] = function(block) {
+    Blockly.Arduino['arduino_serial_begin'] = function(block) {
       const baud = block.getFieldValue('BAUD');
       return '  Serial.begin(' + baud + ');\n';
     };
 
-    arduinoGen['arduino_serial_print'] = function(block) {
-      const text = arduinoGen.valueToCode(block, 'TEXT', arduinoGen.ORDER_ATOMIC) || '""';
+    Blockly.Arduino['arduino_serial_print'] = function(block) {
+      const text = Blockly.Arduino.valueToCode(block, 'TEXT', Blockly.Arduino.ORDER_ATOMIC) || '""';
       return '  Serial.print(' + text + ');\n';
     };
 
-    arduinoGen['arduino_serial_println'] = function(block) {
-      const text = arduinoGen.valueToCode(block, 'TEXT', arduinoGen.ORDER_ATOMIC) || '""';
+    Blockly.Arduino['arduino_serial_println'] = function(block) {
+      const text = Blockly.Arduino.valueToCode(block, 'TEXT', Blockly.Arduino.ORDER_ATOMIC) || '""';
       return '  Serial.println(' + text + ');\n';
     };
 
@@ -307,122 +310,122 @@
     // 5. GENERADORES DE BLOQUES NATIVOS
     // ============================================
 
-    arduinoGen['math_number'] = function(block) {
+    Blockly.Arduino['math_number'] = function(block) {
       const code = Number(block.getFieldValue('NUM'));
-      return [code.toString(), arduinoGen.ORDER_ATOMIC];
+      return [code.toString(), Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    arduinoGen['math_arithmetic'] = function(block) {
+    Blockly.Arduino['math_arithmetic'] = function(block) {
       const OPERATORS = {
-        'ADD': [' + ', arduinoGen.ORDER_ADDITIVE],
-        'MINUS': [' - ', arduinoGen.ORDER_ADDITIVE],
-        'MULTIPLY': [' * ', arduinoGen.ORDER_MULTIPLICATIVE],
-        'DIVIDE': [' / ', arduinoGen.ORDER_MULTIPLICATIVE],
-        'POWER': [' ^ ', arduinoGen.ORDER_NONE]
+        'ADD': [' + ', Blockly.Arduino.ORDER_ADDITIVE],
+        'MINUS': [' - ', Blockly.Arduino.ORDER_ADDITIVE],
+        'MULTIPLY': [' * ', Blockly.Arduino.ORDER_MULTIPLICATIVE],
+        'DIVIDE': [' / ', Blockly.Arduino.ORDER_MULTIPLICATIVE],
+        'POWER': [' ^ ', Blockly.Arduino.ORDER_NONE]
       };
       const tuple = OPERATORS[block.getFieldValue('OP')];
-      const argument0 = arduinoGen.valueToCode(block, 'A', tuple[1]) || '0';
-      const argument1 = arduinoGen.valueToCode(block, 'B', tuple[1]) || '0';
+      const argument0 = Blockly.Arduino.valueToCode(block, 'A', tuple[1]) || '0';
+      const argument1 = Blockly.Arduino.valueToCode(block, 'B', tuple[1]) || '0';
       const code = argument0 + tuple[0] + argument1;
       return [code, tuple[1]];
     };
 
-    arduinoGen['math_random_int'] = function(block) {
-      const argument0 = arduinoGen.valueToCode(block, 'FROM', arduinoGen.ORDER_NONE) || '0';
-      const argument1 = arduinoGen.valueToCode(block, 'TO', arduinoGen.ORDER_NONE) || '0';
-      return ['random(' + argument0 + ', ' + argument1 + ' + 1)', arduinoGen.ORDER_ATOMIC];
+    Blockly.Arduino['math_random_int'] = function(block) {
+      const argument0 = Blockly.Arduino.valueToCode(block, 'FROM', Blockly.Arduino.ORDER_NONE) || '0';
+      const argument1 = Blockly.Arduino.valueToCode(block, 'TO', Blockly.Arduino.ORDER_NONE) || '0';
+      return ['random(' + argument0 + ', ' + argument1 + ' + 1)', Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    arduinoGen['text'] = function(block) {
-      const code = arduinoGen.quote_(block.getFieldValue('TEXT'));
-      return [code, arduinoGen.ORDER_ATOMIC];
+    Blockly.Arduino['text'] = function(block) {
+      const code = Blockly.Arduino.quote_(block.getFieldValue('TEXT'));
+      return [code, Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    arduinoGen['logic_compare'] = function(block) {
+    Blockly.Arduino['logic_compare'] = function(block) {
       const OPERATORS = {
         'EQ': '==', 'NEQ': '!=', 'LT': '<', 'LTE': '<=', 'GT': '>', 'GTE': '>='
       };
       const operator = OPERATORS[block.getFieldValue('OP')];
-      const argument0 = arduinoGen.valueToCode(block, 'A', arduinoGen.ORDER_RELATIONAL) || '0';
-      const argument1 = arduinoGen.valueToCode(block, 'B', arduinoGen.ORDER_RELATIONAL) || '0';
+      const argument0 = Blockly.Arduino.valueToCode(block, 'A', Blockly.Arduino.ORDER_RELATIONAL) || '0';
+      const argument1 = Blockly.Arduino.valueToCode(block, 'B', Blockly.Arduino.ORDER_RELATIONAL) || '0';
       const code = argument0 + ' ' + operator + ' ' + argument1;
-      return [code, arduinoGen.ORDER_RELATIONAL];
+      return [code, Blockly.Arduino.ORDER_RELATIONAL];
     };
 
-    arduinoGen['logic_operation'] = function(block) {
+    Blockly.Arduino['logic_operation'] = function(block) {
       const operator = (block.getFieldValue('OP') == 'AND') ? '&&' : '||';
-      const order = (operator == '&&') ? arduinoGen.ORDER_LOGICAL_AND : arduinoGen.ORDER_LOGICAL_OR;
-      let argument0 = arduinoGen.valueToCode(block, 'A', order);
-      let argument1 = arduinoGen.valueToCode(block, 'B', order);
+      const order = (operator == '&&') ? Blockly.Arduino.ORDER_LOGICAL_AND : Blockly.Arduino.ORDER_LOGICAL_OR;
+      let argument0 = Blockly.Arduino.valueToCode(block, 'A', order);
+      let argument1 = Blockly.Arduino.valueToCode(block, 'B', order);
       if (!argument0) argument0 = 'false';
       if (!argument1) argument1 = 'false';
       return [argument0 + ' ' + operator + ' ' + argument1, order];
     };
 
-    arduinoGen['logic_negate'] = function(block) {
-      const argument0 = arduinoGen.valueToCode(block, 'BOOL', arduinoGen.ORDER_UNARY_PREFIX) || 'false';
-      return ['!' + argument0, arduinoGen.ORDER_UNARY_PREFIX];
+    Blockly.Arduino['logic_negate'] = function(block) {
+      const argument0 = Blockly.Arduino.valueToCode(block, 'BOOL', Blockly.Arduino.ORDER_UNARY_PREFIX) || 'false';
+      return ['!' + argument0, Blockly.Arduino.ORDER_UNARY_PREFIX];
     };
 
-    arduinoGen['logic_boolean'] = function(block) {
+    Blockly.Arduino['logic_boolean'] = function(block) {
       const code = (block.getFieldValue('BOOL') == 'TRUE') ? 'true' : 'false';
-      return [code, arduinoGen.ORDER_ATOMIC];
+      return [code, Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    arduinoGen['controls_if'] = function(block) {
+    Blockly.Arduino['controls_if'] = function(block) {
       let n = 0;
       let code = '';
       let branchCode, conditionCode;
       do {
-        conditionCode = arduinoGen.valueToCode(block, 'IF' + n, arduinoGen.ORDER_NONE) || 'false';
-        branchCode = arduinoGen.statementToCode(block, 'DO' + n);
+        conditionCode = Blockly.Arduino.valueToCode(block, 'IF' + n, Blockly.Arduino.ORDER_NONE) || 'false';
+        branchCode = Blockly.Arduino.statementToCode(block, 'DO' + n);
         code += (n > 0 ? ' else ' : '') + 'if (' + conditionCode + ') {\n' + branchCode + '}';
         n++;
       } while (block.getInput('IF' + n));
 
       if (block.getInput('ELSE')) {
-        branchCode = arduinoGen.statementToCode(block, 'ELSE');
+        branchCode = Blockly.Arduino.statementToCode(block, 'ELSE');
         code += ' else {\n' + branchCode + '}';
       }
       return code + '\n';
     };
 
-    arduinoGen['controls_ifelse'] = arduinoGen['controls_if'];
+    Blockly.Arduino['controls_ifelse'] = Blockly.Arduino['controls_if'];
 
-    arduinoGen['controls_repeat_ext'] = function(block) {
-      const repeats = arduinoGen.valueToCode(block, 'TIMES', arduinoGen.ORDER_ADDITIVE) || '0';
-      let branch = arduinoGen.statementToCode(block, 'DO');
-      branch = arduinoGen.addLoopTrap(branch, block);
-      const loopVar = arduinoGen.nameDB_.getDistinctName('count', Blockly.Variables.NAME_TYPE);
+    Blockly.Arduino['controls_repeat_ext'] = function(block) {
+      const repeats = Blockly.Arduino.valueToCode(block, 'TIMES', Blockly.Arduino.ORDER_ADDITIVE) || '0';
+      let branch = Blockly.Arduino.statementToCode(block, 'DO');
+      branch = Blockly.Arduino.addLoopTrap(branch, block);
+      const loopVar = Blockly.Arduino.nameDB_.getDistinctName('count', Blockly.Variables.NAME_TYPE);
       return '  for (int ' + loopVar + ' = 0; ' + loopVar + ' < ' + repeats + '; ' + loopVar + '++) {\n' + branch + '  }\n';
     };
 
-    arduinoGen['controls_whileUntil'] = function(block) {
+    Blockly.Arduino['controls_whileUntil'] = function(block) {
       const until = block.getFieldValue('MODE') == 'UNTIL';
-      let argument0 = arduinoGen.valueToCode(block, 'BOOL', arduinoGen.ORDER_NONE) || 'false';
+      let argument0 = Blockly.Arduino.valueToCode(block, 'BOOL', Blockly.Arduino.ORDER_NONE) || 'false';
       if (until) argument0 = '!' + argument0;
-      let branch = arduinoGen.statementToCode(block, 'DO');
-      branch = arduinoGen.addLoopTrap(branch, block);
+      let branch = Blockly.Arduino.statementToCode(block, 'DO');
+      branch = Blockly.Arduino.addLoopTrap(branch, block);
       return '  while (' + argument0 + ') {\n' + branch + '  }\n';
     };
 
-    arduinoGen['controls_for'] = function(block) {
-      const variable0 = arduinoGen.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
-      const argument0 = arduinoGen.valueToCode(block, 'FROM', arduinoGen.ORDER_ASSIGNMENT) || '0';
-      const argument1 = arduinoGen.valueToCode(block, 'TO', arduinoGen.ORDER_ASSIGNMENT) || '0';
-      let branch = arduinoGen.statementToCode(block, 'DO');
-      branch = arduinoGen.addLoopTrap(branch, block);
+    Blockly.Arduino['controls_for'] = function(block) {
+      const variable0 = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
+      const argument0 = Blockly.Arduino.valueToCode(block, 'FROM', Blockly.Arduino.ORDER_ASSIGNMENT) || '0';
+      const argument1 = Blockly.Arduino.valueToCode(block, 'TO', Blockly.Arduino.ORDER_ASSIGNMENT) || '0';
+      let branch = Blockly.Arduino.statementToCode(block, 'DO');
+      branch = Blockly.Arduino.addLoopTrap(branch, block);
       return '  for (int ' + variable0 + ' = ' + argument0 + '; ' + variable0 + ' <= ' + argument1 + '; ' + variable0 + '++) {\n' + branch + '  }\n';
     };
 
-    arduinoGen['variables_get'] = function(block) {
-      const code = arduinoGen.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
-      return [code, arduinoGen.ORDER_ATOMIC];
+    Blockly.Arduino['variables_get'] = function(block) {
+      const code = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
+      return [code, Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    arduinoGen['variables_set'] = function(block) {
-      const argument0 = arduinoGen.valueToCode(block, 'VALUE', arduinoGen.ORDER_ASSIGNMENT) || '0';
-      const varName = arduinoGen.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
+    Blockly.Arduino['variables_set'] = function(block) {
+      const argument0 = Blockly.Arduino.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_ASSIGNMENT) || '0';
+      const varName = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
       return '  ' + varName + ' = ' + argument0 + ';\n';
     };
 
@@ -431,7 +434,7 @@
     // ============================================
     function generarCodigo() {
       try {
-        const code = arduinoGen.workspaceToCode(workspace);
+        const code = Blockly.Arduino.workspaceToCode(workspace);
         document.getElementById('codeArea').value = code;
       } catch (e) {
         document.getElementById('codeArea').value = '❌ ERROR: ' + e.message + '\n\nRevisa la consola (F12) para más detalles.';
