@@ -10,37 +10,71 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             background-color: #f4f4f9;
-        }
-        h1 { color: #333; font-size: 24px; margin-bottom: 5px; }
-        p { color: #666; margin-top: 0; }
-        .container {
             display: flex;
-            gap: 20px;
-            height: 65vh;
+            flex-direction: column;
+            height: 95vh;
+            box-sizing: border-box;
+        }
+        h1 { color: #333; font-size: 20px; margin: 0 0 5px 0; }
+        p { color: #666; margin: 0 0 10px 0; font-size: 14px; }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            gap: 10px;
         }
         #blocklyDiv {
-            flex: 2;
+            flex: 1;
             height: 100%;
             border: 1px solid #ccc;
             background-color: #fff;
+            border-radius: 4px;
         }
-        #codeDiv {
-            flex: 1;
+        
+        /* Panel de código deslizable / flotante */
+        #codePanel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 400px;
             height: 100%;
             background-color: #1e1e1e;
             color: #dcdcdc;
+            box-shadow: -4px 0 10px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        #codePanel.closed {
+            transform: translateX(105%);
+        }
+        .code-header {
+            background-color: #2d2d2d;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        #codeDiv {
+            flex: 1;
             padding: 15px;
             font-family: monospace;
             white-space: pre-wrap;
             overflow-y: auto;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 14px;
+            font-size: 13px;
+            margin: 0;
         }
+        
         .controls {
-            margin-top: 15px;
+            margin-top: 10px;
             display: flex;
             gap: 10px;
         }
@@ -48,28 +82,44 @@
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 8px 16px;
+            font-size: 14px;
             cursor: pointer;
             border-radius: 4px;
         }
         button:hover {
             background-color: #0056b3;
         }
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
 
     <h1>Generador de Bloques para Arduino Nano</h1>
-    <p>Ensambla tus bloques en Setup o Loop, selecciona el pin y descarga tu archivo .ino</p>
+    <p>Diseña tu lógica con bloques, revisa el código C++ y descárgalo para tu placa.</p>
 
-    <div class="container">
+    <div class="main-container">
+        <!-- Espacio de trabajo Blockly maximizado -->
         <div id="blocklyDiv"></div>
-        <div id="codeDiv">// Conecta los bloques al Setup o Loop para ver el código...</div>
+
+        <!-- Panel lateral de código ocultable -->
+        <div id="codePanel" class="closed">
+            <div class="code-header">
+                <span>Código C++ (Arduino)</span>
+                <button class="secondary" onclick="toggleCodePanel()" style="padding: 2px 8px; font-size: 12px;">✕ Cerrar</button>
+            </div>
+            <pre id="codeDiv">// Conecta los bloques al Setup o Loop...</pre>
+        </div>
     </div>
 
     <div class="controls">
         <button onclick="downloadCode()">Descargar Archivo .ino</button>
+        <button class="secondary" onclick="toggleCodePanel()">Ver / Ocultar Código C++</button>
     </div>
 
     <!-- Caja de herramientas -->
@@ -82,7 +132,6 @@
     </xml>
 
     <script>
-        // 1. Definición de Bloques con selector de Pines (0 al 13)
         const pinesDisponibles = [
             ["D0", "0"], ["D1", "1"], ["D2", "2"], ["D3", "3"], 
             ["D4", "4"], ["D5", "5"], ["D6", "6"], ["D7", "7"], 
@@ -90,27 +139,22 @@
             ["D12", "12"], ["D13", "13"]
         ];
 
-        // Bloque SETUP
         Blockly.Blocks['arduino_setup'] = {
             init: function() {
                 this.appendDummyInput().appendField("SETUP (Configuración inicial)");
                 this.appendStatementInput("STACK").setCheck(null);
                 this.setColour(210);
-                this.setTooltip("Código que se ejecuta una sola vez al iniciar");
             }
         };
 
-        // Bloque LOOP
         Blockly.Blocks['arduino_loop'] = {
             init: function() {
                 this.appendDummyInput().appendField("LOOP (Bucle principal)");
                 this.appendStatementInput("STACK").setCheck(null);
                 this.setColour(160);
-                this.setTooltip("Código que se repite indefinidamente");
             }
         };
 
-        // Bloque pinMode
         Blockly.Blocks['pin_mode'] = {
             init: function() {
                 this.appendDummyInput()
@@ -124,21 +168,19 @@
             }
         };
 
-        // Bloque digitalWrite
         Blockly.Blocks['digital_write'] = {
             init: function() {
                 this.appendDummyInput()
                     .appendField("Escribir en Pin")
                     .appendField(new Blockly.FieldDropdown(pinesDisponibles), "PIN")
                     .appendField("estado")
-                    .appendField(new Blockly.FieldDropdown([["HIGH (Alto / Encendido)", "HIGH"], ["LOW (Bajo / Apagado)", "LOW"]]), "STATE");
+                    .appendField(new Blockly.FieldDropdown([["HIGH (Encendido)", "HIGH"], ["LOW (Apagado)", "LOW"]]), "STATE");
                 this.setPreviousStatement(true, null);
                 this.setNextStatement(true, null);
                 this.setColour(230);
             }
         };
 
-        // Bloque Delay
         Blockly.Blocks['delay_ms'] = {
             init: function() {
                 this.appendDummyInput()
@@ -150,46 +192,35 @@
             }
         };
 
-        // 2. Generadores de Código C++
         Blockly.JavaScript['arduino_setup'] = function(block) {
-            var branch = Blockly.JavaScript.statementToCode(block, 'STACK');
-            return branch;
+            return Blockly.JavaScript.statementToCode(block, 'STACK');
         };
 
         Blockly.JavaScript['arduino_loop'] = function(block) {
-            var branch = Blockly.JavaScript.statementToCode(block, 'STACK');
-            return branch;
+            return Blockly.JavaScript.statementToCode(block, 'STACK');
         };
 
         Blockly.JavaScript['pin_mode'] = function(block) {
-            var pin = block.getFieldValue('PIN');
-            var mode = block.getFieldValue('MODE');
-            return 'pinMode(' + pin + ', ' + mode + ');\n';
+            return 'pinMode(' + block.getFieldValue('PIN') + ', ' + block.getFieldValue('MODE') + ');\n';
         };
 
         Blockly.JavaScript['digital_write'] = function(block) {
-            var pin = block.getFieldValue('PIN');
-            var state = block.getFieldValue('STATE');
-            return 'digitalWrite(' + pin + ', ' + state + ');\n';
+            return 'digitalWrite(' + block.getFieldValue('PIN') + ', ' + block.getFieldValue('STATE') + ');\n';
         };
 
         Blockly.JavaScript['delay_ms'] = function(block) {
-            var time = block.getFieldValue('TIME');
-            return 'delay(' + time + ');\n';
+            return 'delay(' + block.getFieldValue('TIME') + ');\n';
         };
 
-        // 3. Inicializar espacio de trabajo
         var demoWorkspace = Blockly.inject('blocklyDiv', {
             toolbox: document.getElementById('toolbox'),
             trashcan: true
         });
 
-        // 4. Actualizador de código en tiempo real
         function myUpdateCode(event) {
             let setupCode = "";
             let loopCode = "";
 
-            // Buscar en los bloques principales del workspace
             var topBlocks = demoWorkspace.getTopBlocks(true);
             for (var i = 0; i < topBlocks.length; i++) {
                 var block = topBlocks[i];
@@ -204,13 +235,16 @@
                             `void setup() {\n` + setupCode + `}\n\n` +
                             `void loop() {\n` + loopCode + `}\n`;
 
-            document.getElementById('codeDivinnerText').innerText = finalCode; // Fallback text container check
             document.getElementById('codeDiv').innerText = finalCode;
         }
 
         demoWorkspace.addChangeListener(myUpdateCode);
 
-        // 5. Descargar archivo
+        function toggleCodePanel() {
+            var panel = document.getElementById('codePanel');
+            panel.classList.toggle('closed');
+        }
+
         function downloadCode() {
             var codeText = document.getElementById('codeDiv').innerText;
             var element = document.createElement('a');
