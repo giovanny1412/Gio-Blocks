@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloques a Arduino - LED Simple</title>
+    <!-- Cargar Blockly desde CDN -->
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 { color: #333; font-size: 24px; }
+        .container {
+            display: flex;
+            gap: 20px;
+            height: 70vh;
+        }
+        #blocklyDiv {
+            flex: 2;
+            height: 100%;
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+        #codeDiv {
+            flex: 1;
+            height: 100%;
+            background-color: #1e1e1e;
+            color: #dcdcdc;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .controls {
+            margin-top: 15px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Generador de Bloques para Arduino (Nano / ESP32)</h1>
+    <p>Arrastra los bloques, visualiza el código C++ en tiempo real y descárgalo.</p>
+
+    <div class="container">
+        <!-- Contenedor visual de Blockly -->
+        <div id="blocklyDiv"></div>
+        <!-- Contenedor del código C++ generado -->
+        <div id="codeDiv">// El código aparecerá aquí...</div>
+    </div>
+
+    <div class="controls">
+        <button onclick="downloadCode()">Descargar Archivo .ino</button>
+    </div>
+
+    <!-- Caja de herramientas XML inicial para Blockly -->
+    <xml id="toolbox" style="display: none">
+        <block type="setup_loop"></block>
+        <block type="digital_write"></block>
+        <block type="delay_ms"></block>
+    </xml>
+
+    <script>
+        // 1. Definir los Bloques personalizados para Arduino
+
+        // Bloque Setup y Loop principal
+        Blockly.Blocks['setup_loop'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Configurar Pin 13 como SALIDA");
+                this.setNextStatement(true, null);
+                this.setColour(120);
+                this.setTooltip("Inicializa el pin del LED");
+            }
+        };
+
+        // Bloque Digital Write (Encender / Apagar)
+        Blockly.Blocks['digital_write'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("Escribir en Pin 13 el estado:")
+                    .appendField(new Blockly.FieldDropdown([["HIGH (Encendido)", "HIGH"], ["LOW (Apagado)", "LOW"]]), "STATE");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(230);
+            }
+        };
+
+        // Bloque de Retardo (Delay)
+        Blockly.Blocks['delay_ms'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("Esperar (milisegundos):")
+                    .appendField(new Blockly.FieldNumber(1000, 0), "TIME");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(290);
+            }
+        };
+
+        // 2. Generadores de Código C++ para cada bloque
+        
+        // Generador para Setup/Loop
+        Blockly.JavaScript['setup_loop'] = function(block) {
+            return 'pinMode(13, OUTPUT);\n';
+        };
+
+        // Generador para Digital Write
+        Blockly.JavaScript['digital_write'] = function(block) {
+            var state = block.getFieldValue('STATE');
+            return 'digitalWrite(13, ' + state + ');\n';
+        };
+
+        // Generador para Delay
+        Blockly.JavaScript['delay_ms'] = function(block) {
+            var time = block.getFieldValue('TIME');
+            return 'delay(' + time + ');\n';
+        };
+
+        // 3. Inicializar el espacio de trabajo de Blockly
+        var demoWorkspace = Blockly.inject('blocklyDiv', {
+            toolbox: document.getElementById('toolbox')
+        });
+
+        // 4. Actualizar el código C++ automáticamente al cambiar los bloques
+        function myUpdateCode(event) {
+            var code = `#include <Arduino.h>\n\n` +
+                       `void setup() {\n` +
+                       `  // Código de configuración generado por bloques\n`;
+            
+            // Obtener el código generado por los bloques conectados en el workspace
+            var blockCode = Blockly.JavaScript.workspaceToCode(demoWorkspace);
+            
+            code += blockCode;
+            code += `}\n\nvoid loop() {\n  // Bucle principal\n}\n`;
+            
+            document.getElementById('codeDiv').innerText = code;
+        }
+
+        demoWorkspace.addChangeListener(myUpdateCode);
+
+        // 5. Función para descargar el archivo .ino
+        function downloadCode() {
+            var codeText = document.getElementById('codeDiv').innerText;
+            var element = document.createElement('a');
+            var file = new Blob([codeText], {type: 'text/plain'});
+            element.href = URL.createObjectURL(file);
+            element.download = "programa_arduino.ino";
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+    </script>
+</body>
+</html>
