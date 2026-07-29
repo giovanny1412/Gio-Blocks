@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloques para Arduino Nano</title>
+    <title>Bloques para Arduino Nano con Web Serial</title>
     <!-- Cargar Blockly desde CDN -->
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <style>
@@ -34,12 +34,12 @@
             border-radius: 4px;
         }
         
-        /* Panel de código deslizable / flotante */
+        /* Panel lateral de código C++ */
         #codePanel {
             position: absolute;
             right: 0;
             top: 0;
-            width: 400px;
+            width: 420px;
             height: 100%;
             background-color: #1e1e1e;
             color: #dcdcdc;
@@ -77,6 +77,8 @@
             margin-top: 10px;
             display: flex;
             gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         button {
             background-color: #007bff;
@@ -96,30 +98,44 @@
         button.secondary:hover {
             background-color: #5a6268;
         }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #218838;
+        }
+        #serialStatus {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
 
     <h1>Generador de Bloques para Arduino Nano</h1>
-    <p>Diseña tu lógica con bloques, revisa el código C++ y descárgalo para tu placa.</p>
+    <p>Ensambla tus bloques, visualiza el C++ generado en tiempo real y conéctate por Web Serial.</p>
 
     <div class="main-container">
-        <!-- Espacio de trabajo Blockly maximizado -->
+        <!-- Espacio de trabajo Blockly -->
         <div id="blocklyDiv"></div>
 
-        <!-- Panel lateral de código ocultable -->
+        <!-- Panel lateral deslizante de código C++ -->
         <div id="codePanel" class="closed">
             <div class="code-header">
-                <span>Código C++ (Arduino)</span>
+                <span>Código C++ (Arduino Nano)</span>
                 <button class="secondary" onclick="toggleCodePanel()" style="padding: 2px 8px; font-size: 12px;">✕ Cerrar</button>
             </div>
-            <pre id="codeDiv">// Conecta los bloques al Setup o Loop...</pre>
+            <pre id="codeDiv">// Conecta bloques en SETUP o LOOP para ver el código...</pre>
         </div>
     </div>
 
     <div class="controls">
         <button onclick="downloadCode()">Descargar Archivo .ino</button>
         <button class="secondary" onclick="toggleCodePanel()">Ver / Ocultar Código C++</button>
+        <button class="success" onclick="conectarSerialNano()">Conectar Arduino Nano (Web Serial)</button>
+        <span id="serialStatus">Estado: Desconectado</span>
     </div>
 
     <!-- Caja de herramientas -->
@@ -217,6 +233,7 @@
             trashcan: true
         });
 
+        // Función corregida para forzar la actualización de código C++ en tiempo real
         function myUpdateCode(event) {
             let setupCode = "";
             let loopCode = "";
@@ -232,13 +249,16 @@
             }
 
             var finalCode = `#include <Arduino.h>\n\n` +
-                            `void setup() {\n` + setupCode + `}\n\n` +
-                            `void loop() {\n` + loopCode + `}\n`;
+                            `void setup() {\n${setupCode}}\n\n` +
+                            `void loop() {\n${loopCode}}\n`;
 
             document.getElementById('codeDiv').innerText = finalCode;
         }
 
         demoWorkspace.addChangeListener(myUpdateCode);
+        
+        // Ejecutar una vez al cargar para inicializar el texto
+        myUpdateCode();
 
         function toggleCodePanel() {
             var panel = document.getElementById('codePanel');
@@ -254,6 +274,56 @@
             document.body.appendChild(element);
             element.click();
             document.body.removeChild(element);
+        }
+
+        // Implementación de Web Serial API para conectar con el Arduino Nano
+        let puertoSerial = null;
+
+        async function conectarSerialNano() {
+            if (!("serial" in navigator)) {
+                alert("Tu navegador no soporta Web Serial API. Usa Google Chrome o Microsoft Edge.");
+                return;
+            }
+
+            try {
+                // Solicitar puerto al usuario mediante ventana emergente del navegador
+                puertoSerial = await navigator.serial.requestPort();
+                
+                // Abrir puerto a 9600 baudios (estándar para comunicación con Arduino Nano)
+                await puertoSerial.open({ baudRate: 9600 });
+                
+                document.getElementById('serialStatus').innerText = "Estado: Conectado al Nano";
+                document.getElementById('serialStatus').style.color = "green";
+                
+                // Bucle de lectura opcional o escucha de datos del monitor serial
+                leerPuertoSerial();
+            } catch (error) {
+                console.error("Error al conectar puerto serial:", error);
+                document.getElementById('serialStatus').innerText = "Estado: Error de conexión";
+                document.getElementById('serialStatus').style.color = "red";
+            }
+        }
+
+        async function leerPuertoSerial() {
+            while (puertoSerial && puertoSerial.readable) {
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = puertoSerial.readable.pipeTo(textDecoder.writable);
+                const reader = textDecoder.readable.getReader();
+
+                try {
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        if (value) {
+                            console.log("Datos recibidos del Nano:", value);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error leyendo flujo serial:", error);
+                } finally {
+                    reader.releaseLock();
+                }
+            }
         }
     </script>
 </body>
