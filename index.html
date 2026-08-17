@@ -92,6 +92,7 @@ input[type="file"]{display:none;}
     <select id="manualPort" style="display:none;padding:4px 8px;border-radius:4px;border:1px solid #ccc;font-size:12px;">
       <option value="">-- Puerto --</option>
     </select>
+    <a id="downloadAgentBtn" href="descargas.html" style="display:none;margin-left:8px;padding:4px 10px;background:#2563eb;color:#fff;border-radius:4px;font-size:12px;text-decoration:none;white-space:nowrap;">⬇ Descargar agente</a>
   </div>
 </div>
 <div class="main-container">
@@ -3425,6 +3426,7 @@ async function actualizarConexion() {
     var text = document.getElementById("connText");
     var portSpan = document.getElementById("connPort");
     var manualSelect = document.getElementById("manualPort");
+    document.getElementById("downloadAgentBtn").style.display = "none";
 
     if (data.detected_port) {
       dot.classList.add("connected");
@@ -3462,6 +3464,7 @@ async function actualizarConexion() {
     text.textContent = "Agente offline";
     document.getElementById("connPort").textContent = "";
     document.getElementById("manualPort").style.display = "none";
+    document.getElementById("downloadAgentBtn").style.display = "inline-block";
   }
 }
 
