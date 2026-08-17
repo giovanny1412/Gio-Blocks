@@ -1,522 +1,3586 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Blockly Arduino Nano</title>
-  <script src="https://unpkg.com/blockly@10.4.3/blockly.min.js"></script>
-  <script src="https://unpkg.com/blockly@10.4.3/msg/es.js"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
-    h2 { color: #333; margin-bottom: 10px; }
-    #blocklyDiv { height: 480px; width: 100%; border: 2px solid #00979D; border-radius: 8px; background: #fff; }
-    .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    button { padding: 12px 20px; font-size: 15px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: all 0.2s; }
-    button:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .btn-generar { background: #00979D; color: white; }
-    .btn-generar:hover { background: #007a82; }
-    .btn-descargar { background: #6c757d; color: white; }
-    .btn-descargar:hover { background: #5a6268; }
-    .btn-subir { background: #28a745; color: white; }
-    .btn-subir:hover { background: #218838; }
-    .btn-subir:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
-    #codeArea { width: 100%; height: 200px; font-family: 'Fira Code', 'Courier New', monospace; font-size: 13px; margin-top: 12px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: #1e1e1e; color: #d4d4d4; resize: vertical; }
-    .hint { color: #666; font-size: 13px; }
-    #statusArea { margin-top: 10px; padding: 10px 14px; border-radius: 6px; font-size: 14px; display: none; align-items: center; gap: 8px; }
-    .status-ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: flex !important; }
-    .status-err { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: flex !important; }
-    .status-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; display: flex !important; }
-    .spinner { width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #00979D; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  </style>
+<meta charset="UTF-8">
+<title>Blockly ESP32 + Monitor Serial</title>
+<script src="blockly.min.js"></script>
+<script src="es.js"></script>
+<style>
+*{box-sizing:border-box;}
+body{font-family:"Segoe UI",Arial,sans-serif;margin:0;padding:15px;background:#f0f2f5;}
+h2{color:#333;margin-bottom:8px;font-size:22px;display:flex;align-items:center;gap:10px;}
+.main-container{display:flex;gap:15px;}
+.left-panel{flex:1;min-width:0;}
+.right-panel{width:380px;display:flex;flex-direction:column;gap:10px;}
+#blocklyDiv{height:460px;width:100%;border:2px solid #007acc;border-radius:8px;background:#fff;}
+.top-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.top-bar button,.controls button,.serial-controls button{padding:8px 16px;font-size:14px;cursor:pointer;border:none;border-radius:5px;font-weight:bold;transition:all 0.2s;}
+.top-bar button:hover,.controls button:hover,.serial-controls button:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+.btn-generar{background:#007acc;color:white;}
+.btn-descargar{background:#6c757d;color:white;}
+.btn-subir{background:#28a745;color:white;}
+.btn-subir:disabled{background:#6c757d;cursor:not-allowed;transform:none;}
+.btn-guardar{background:#fd7e14;color:white;}
+.btn-cargar{background:#6f42c1;color:white;}
+.btn-ejemplo{background:#17a2b8;color:white;}
+.btn-serial-start{background:#28a745;color:white;}
+.btn-serial-stop{background:#dc3545;color:white;}
+.btn-serial-clear{background:#6c757d;color:white;}
+#codeArea{width:100%;height:140px;font-family:"Fira Code","Courier New",monospace;font-size:12px;margin-top:10px;padding:10px;border:2px solid #ddd;border-radius:8px;background:#1e1e1e;color:#d4d4d4;resize:vertical;}
+#statusArea{margin-top:8px;padding:8px 12px;border-radius:5px;font-size:13px;display:none;align-items:center;gap:6px;}
+.status-ok{background:#d4edda;color:#155724;border:1px solid #c3e6cb;display:flex !important;}
+.status-err{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;display:flex !important;}
+.status-info{background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;display:flex !important;}
+.spinner{width:14px;height:14px;border:2px solid #ccc;border-top:2px solid #007acc;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+.hint{color:#666;font-size:12px;margin-left:auto;}
+input[type="file"]{display:none;}
+.serial-panel{background:#1e1e1e;border:2px solid #333;border-radius:8px;display:flex;flex-direction:column;height:460px;}
+.serial-header{background:#2d2d2d;padding:10px 14px;border-radius:6px 6px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #444;}
+.serial-header h3{color:#fff;margin:0;font-size:15px;flex:1;}
+.serial-header select{padding:5px 8px;border-radius:4px;border:1px solid #555;background:#333;color:#fff;font-size:13px;}
+.serial-header .serial-status{width:10px;height:10px;border-radius:50%;background:#dc3545;}
+.serial-header .serial-status.active{background:#28a745;box-shadow:0 0 6px #28a745;}
+#serialOutput{flex:1;padding:10px;font-family:"Fira Code","Courier New",monospace;font-size:13px;color:#d4d4d4;overflow-y:auto;white-space:pre-wrap;word-break:break-word;}
+.serial-controls{padding:10px 14px;background:#2d2d2d;border-radius:0 0 6px 6px;border-top:1px solid #444;display:flex;gap:8px;}
+.model-bar{display:flex;gap:10px;align-items:center;margin-bottom:8px;background:#fff;padding:8px 12px;border-radius:6px;border:1px solid #ddd;}
+.model-bar label{font-weight:bold;color:#333;font-size:13px;}
+.model-bar select{padding:5px 10px;border-radius:4px;border:1px solid #ccc;background:#fff;font-size:13px;}
+.model-info{color:#666;font-size:12px;}
+
+/* Indicador de conexion */
+.conn-indicator{display:flex;align-items:center;gap:8px;font-size:13px;color:#333;background:#fff;padding:6px 12px;border-radius:6px;border:1px solid #ddd;margin-left:auto;}
+.conn-dot{width:10px;height:10px;border-radius:50%;background:#dc3545;transition:background 0.3s;}
+.conn-dot.connected{background:#28a745;box-shadow:0 0 6px #28a745;}
+.conn-info{font-weight:600;}
+.conn-port{color:#666;font-size:12px;}
+
+/* Log de compilacion */
+.compile-log-panel{background:#1e1e1e;border:2px solid #333;border-radius:8px;margin-top:10px;overflow:hidden;}
+.compile-log-header{background:#2d2d2d;padding:8px 14px;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center;}
+.compile-log-header h4{color:#fff;margin:0;font-size:13px;}
+#compileLogArea{width:100%;height:160px;font-family:"Fira Code","Courier New",monospace;font-size:12px;padding:10px;background:#1e1e1e;color:#d4d4d4;border:none;resize:vertical;overflow-y:auto;}
+#compileLogArea::-webkit-scrollbar{width:8px;}#compileLogArea::-webkit-scrollbar-thumb{background:#444;border-radius:4px;}
+.btn-cancelar{background:#dc3545;color:white;}
+.btn-cancelar:disabled{background:#6c757d;cursor:not-allowed;}
+
+.btn-limpiar{background:#e74c3c;color:white;}
+.btn-limpiar:hover{background:#c0392b;}
+</style>
+<base target="_blank">
+<base target="_blank">
+<base target="_blank">
+<base target="_blank">
+<base target="_blank">
 <base target="_blank">
 </head>
 <body>
-  <h2>🧩 Programa tu Arduino Nano con Bloques</h2>
-
-  <div id="blocklyDiv"></div>
-
-  <xml id="toolbox" style="display: none">
-    <category name="⚡ Arduino" colour="#00979D">
-      <block type="arduino_setup_loop"></block>
-      <block type="arduino_pin_mode"></block>
-      <block type="arduino_digital_write"></block>
-      <block type="arduino_digital_read"></block>
-      <block type="arduino_analog_write"></block>
-      <block type="arduino_analog_read"></block>
-      <block type="arduino_delay"></block>
-      <block type="arduino_serial_begin"></block>
-      <block type="arduino_serial_print"></block>
-      <block type="arduino_serial_println"></block>
-    </category>
-    <category name="🔁 Control" colour="#FFAB19">
-      <block type="controls_if"></block>
-      <block type="controls_ifelse"></block>
-      <block type="controls_repeat_ext">
-        <value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
-      </block>
-      <block type="controls_whileUntil"></block>
-      <block type="controls_for"></block>
-    </category>
-    <category name="🔍 Lógica" colour="#59C059">
-      <block type="logic_compare"></block>
-      <block type="logic_operation"></block>
-      <block type="logic_negate"></block>
-      <block type="logic_boolean"></block>
-    </category>
-    <category name="🔢 Matemáticas" colour="#59C059">
-      <block type="math_number"><field name="NUM">0</field></block>
-      <block type="math_arithmetic"></block>
-      <block type="math_random_int"></block>
-    </category>
-    <category name="📦 Variables" colour="#FF8C1A" custom="VARIABLE"></category>
-  </xml>
-
-  <div class="controls">
-    <button class="btn-generar" onclick="generarCodigo()">⚙️ Generar Código</button>
-    <button class="btn-descargar" onclick="descargarCodigo()">💾 Descargar .ino</button>
-    <button class="btn-subir" id="btnSubir" onclick="subirAAduino()">📤 Subir a Arduino</button>
-    <span class="hint">Conecta el Nano y ejecuta <code>agente_local.py</code> para subir directo</span>
+<h2>Blockly ESP32 + Monitor Serial</h2>
+<div class="model-bar">
+  <label>Modelo ESP32:</label>
+  <select id="espModel" onchange="cambiarModelo()">
+    <option value="dev">ESP32 Dev Module</option>
+    <option value="s3">ESP32-S3</option>
+    <option value="c3">ESP32-C3</option>
+    <option value="c6">ESP32-C6</option>
+  </select>
+  <span class="model-info" id="modelInfo">WiFi + BT Classic + BLE | 34 GPIOs | 2x DAC (GPIO25,26)</span>
+  <div class="conn-indicator" id="connIndicator">
+    <div class="conn-dot" id="connDot"></div>
+    <span class="conn-info" id="connText">Buscando...</span>
+    <span class="conn-port" id="connPort"></span>
+    <select id="manualPort" style="display:none;padding:4px 8px;border-radius:4px;border:1px solid #ccc;font-size:12px;">
+      <option value="">-- Puerto --</option>
+    </select>
   </div>
+</div>
+<div class="main-container">
+<div class="left-panel">
+<div class="top-bar">
+<button class="btn-guardar" onclick="guardarProyecto()">Guardar</button>
+<button class="btn-cargar" onclick="document.getElementById('fileInput').click()">Cargar</button>
+<input type="file" id="fileInput" accept=".json" onchange="cargarProyecto(this)">
+<button class="btn-ejemplo" onclick="cargarEjemplo('blink')">Blink</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('wifi_scan')">WiFi Scan</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('ble_server')">BLE Server</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('web_server')">Web Server</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('web_led')">LED Web</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('adc_dac')">ADC + DAC</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('bt_led')">LED Bluetooth</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('touch')">Touch</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('pwm_servo')">PWM Servo</button>
+<button class="btn-ejemplo" onclick="cargarEjemplo('bmp280')">BMP280</button>
+      <button class="btn-ejemplo" onclick="cargarEjemplo('deep_sleep')">Deep Sleep</button>
+      <button class="btn-ejemplo" onclick="cargarEjemplo('now_master')">NOW Master</button>
+      <button class="btn-ejemplo" onclick="cargarEjemplo('now_slave')">NOW Esclavo</button>
+</div>
+<div id="blocklyDiv"></div>
+<div class="controls">
+<button class="btn-generar" onclick="generarCodigo()">Generar Codigo</button>
+<button class="btn-descargar" onclick="descargarCodigo()">Descargar .ino</button>
+<button class="btn-subir" id="btnSubir" onclick="subirAAduino()">Subir a ESP32</button>
+<button class="btn-limpiar" onclick="limpiarEspacio()" title="Libera espacio de compilaciones y temporales">Limpiar Espacio</button>
+<span class="hint">Conecta el ESP32 y ejecuta el agente</span>
+</div>
+<div id="statusArea"></div>
+<div class="compile-log-panel" id="compileLogPanel" style="display:none;">
+  <div class="compile-log-header">
+    <h4>Log de Compilacion / Subida</h4>
+    <button class="btn-cancelar" id="btnCancelar" onclick="cancelarSubida()" disabled>Cancelar</button>
+  </div>
+  <textarea id="compileLogArea" readonly></textarea>
+</div>
+<textarea id="codeArea" placeholder="El codigo ESP32 aparecera aqui..."></textarea>
+</div>
+<div class="right-panel">
+<div class="serial-panel">
+<div class="serial-header">
+<h3>Monitor Serial</h3>
+<div class="serial-status" id="serialStatus"></div>
+<select id="serialBaud">
+<option value="9600">9600 baud</option>
+<option value="115200" selected>115200 baud</option>
+<option value="57600">57600 baud</option>
+<option value="4800">4800 baud</option>
+</select>
+</div>
+<div id="serialOutput"></div>
+<div class="serial-controls">
+<button class="btn-serial-start" id="btnSerialStart" onclick="iniciarMonitor()">Iniciar</button>
+<button class="btn-serial-stop" id="btnSerialStop" onclick="detenerMonitor()">Detener</button>
+<button class="btn-serial-clear" onclick="limpiarMonitor()">Limpiar</button>
+</div>
+</div>
+</div>
+</div>
 
-  <div id="statusArea"></div>
-  <textarea id="codeArea" placeholder="El código Arduino aparecerá aquí..."></textarea>
+<xml id="toolbox" style="display:none">
+<category name="ESP32" colour="#007acc">
+<block type="esp32_setup_loop"></block>
+<block type="esp32_pin_mode"></block>
+<block type="esp32_digital_write"></block>
+<block type="esp32_digital_read"></block>
+<block type="esp32_analog_read"></block>
+<block type="esp32_dac_write"></block>
+<block type="esp32_pwm_write"></block>
+<block type="esp32_ledc_attach"></block>
+<block type="esp32_ledc_attach_channel"></block>
+<block type="esp32_ledc_write_channel"></block>
+<block type="esp32_touch_read"></block>
+<block type="esp32_delay"></block>
+<block type="esp32_delay_micros"></block>
+<block type="esp32_serial_begin"></block>
+<block type="esp32_serial_print"></block>
+<block type="esp32_serial_println"></block>
+<block type="esp32_restart"></block>
+<block type="esp32_deep_sleep"></block>
+</category>
+<category name="Salidas" colour="#E74C3C">
+<block type="esp32_tone"></block>
+<block type="esp32_no_tone"></block>
+<block type="esp32_rgb"></block>
+<block type="esp32_neopixel_begin"></block>
+<block type="esp32_neopixel_color"></block>
+<block type="esp32_neopixel_fill"></block>
+<block type="esp32_neopixel_apagar"></block>
+<block type="esp32_servo_attach"></block>
+<block type="esp32_servo_write"></block>
+<block type="esp32_servo360_write"></block>
+<block type="esp32_motor"></block>
+<block type="esp32_relay"></block>
+</category>
+<category name="Motores Paso a Paso" colour="#E67E22">
+<block type="esp32_stepper_driver_begin"></block>
+<block type="esp32_stepper_driver_move"></block>
+<block type="esp32_stepper_driver_rotate"></block>
+<block type="esp32_stepper_driver_speed"></block>
+<block type="esp32_stepper_driver_stop"></block>
+<block type="esp32_stepper_4wire_begin"></block>
+<block type="esp32_stepper_4wire_move"></block>
+<block type="esp32_stepper_4wire_speed"></block>
+</category>
+<category name="Sensores" colour="#9B59B6">
+<block type="esp32_button"></block>
+<block type="esp32_potentiometer"></block>
+<block type="esp32_ldr"></block>
+<block type="esp32_dht_temp"></block>
+<block type="esp32_dht_hum"></block>
+<block type="esp32_ultrasonic_read"></block>
+<block type="esp32_hall_read"></block>
+<block type="esp32_ky038_digital"></block>
+<block type="esp32_ky038_analog"></block>
+<block type="esp32_soil_moisture"></block>
+<block type="esp32_rain_sensor"></block>
+<block type="esp32_flame_sensor"></block>
+<block type="esp32_ir_obstacle"></block>
+<block type="esp32_tds_read"></block>
+</category>
+<category name="Sensores Avanzados" colour="#C0392B">
+      <block type="esp32_bmp280_begin"></block>
+      <block type="esp32_bmp280_temp"></block>
+      <block type="esp32_bmp280_pres"></block>
+      <block type="esp32_bmp280_alt"></block>
+      <block type="esp32_mq2_read"></block>
+      <block type="esp32_mq3_read"></block>
+      <block type="esp32_mq135_read"></block>
+      <block type="esp32_pir_read"></block>
+      <block type="esp32_ld2410_begin"></block>
+      <block type="esp32_ld2410_presence"></block>
+      <block type="esp32_ld2410_distance"></block>
+      <block type="esp32_tcs3200_begin"></block>
+      <block type="esp32_tcs3200_read"></block>
+      <block type="esp32_rfid_begin"></block>
+      <block type="esp32_rfid_present"></block>
+      <block type="esp32_rfid_read_uid"></block>
+      <block type="esp32_inmp441_begin"></block>
+      <block type="esp32_inmp441_read_level"></block>
+      <block type="esp32_ds18b20_begin"></block>
+      <block type="esp32_ds18b20_read"></block>
+      <block type="esp32_mpu6050_begin"></block>
+      <block type="esp32_mpu6050_accel"></block>
+      <block type="esp32_mpu6050_gyro"></block>
+    </category>
+    <category name="WiFi" colour="#D35400">
+<block type="esp32_wifi_begin"></block>
+<block type="esp32_wifi_ap"></block>
+<block type="esp32_wifi_connected"></block>
+<block type="esp32_wifi_localip"></block>
+<block type="esp32_wifi_scan"></block>
+<block type="esp32_web_server_begin"></block>
+<block type="esp32_web_server_on"></block>
+<block type="esp32_web_server_handle"></block>
+<block type="esp32_web_send"></block>
+<block type="esp32_http_get"></block>
+</category>
+<category name="Bluetooth BLE" colour="#3498DB">
+<block type="esp32_ble_begin"></block>
+<block type="esp32_ble_set_value"></block>
+<block type="esp32_ble_get_value"></block>
+<block type="esp32_ble_notify"></block>
+<block type="esp32_ble_connected"></block>
+</category>
+<category name="ESP32 NOW" colour="#8E44AD">
+<block type="esp32_now_begin"></block>
+<block type="esp32_now_add_peer"></block>
+<block type="esp32_now_get_mac"></block>
+<block type="esp32_now_send_text"></block>
+<block type="esp32_now_send_number"></block>
+<block type="esp32_now_on_receive"></block>
+<block type="esp32_now_received_text"></block>
+<block type="esp32_now_received_number"></block>
+</category>
+<category name="Pantallas" colour="#16A085">
+<block type="esp32_lcd_begin"></block>
+<block type="esp32_lcd_clear"></block>
+<block type="esp32_lcd_print"></block>
+<block type="esp32_oled_begin"></block>
+<block type="esp32_oled_clear"></block>
+<block type="esp32_oled_print"></block>
+</category>
+<category name="Utilidades" colour="#F39C12">
+<block type="esp32_map"></block>
+<block type="esp32_millis"></block>
+<block type="esp32_random"></block>
+<block type="esp32_random_seed"></block>
+</category>
+<category name="Texto" colour="#8E44AD">
+<block type="text"><field name="TEXT">Hola ESP32</field></block>
+<block type="text_join"></block>
+<block type="text_length"></block>
+<block type="text_isEmpty"></block>
+<block type="text_indexOf"><value name="VALUE"><shadow type="text"><field name="TEXT">abc</field></shadow></value><value name="FIND"><shadow type="text"><field name="TEXT">b</field></shadow></value></block>
+<block type="text_charAt"><value name="VALUE"><shadow type="text"><field name="TEXT">abc</field></shadow></value><value name="AT"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>
+<block type="text_getSubstring"><value name="STRING"><shadow type="text"><field name="TEXT">abcdef</field></shadow></value><value name="AT1"><shadow type="math_number"><field name="NUM">1</field></shadow></value><value name="AT2"><shadow type="math_number"><field name="NUM">3</field></shadow></value></block>
+<block type="text_changeCase"></block>
+<block type="text_trim"></block>
+<block type="text_prompt_ext"><value name="TEXT"><shadow type="text"><field name="TEXT">abc</field></shadow></value></block>
+</category>
+<category name="Control" colour="#FFAB19">
+<block type="controls_if"></block>
+<block type="controls_ifelse"></block>
+<block type="controls_repeat_ext">
+<value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
+</block>
+<block type="controls_whileUntil"></block>
+<block type="controls_for"></block>
+<block type="controls_flow_statements"></block>
+</category>
+<category name="Logica" colour="#59C059">
+<block type="logic_compare"></block>
+<block type="logic_operation"></block>
+<block type="logic_negate"></block>
+<block type="logic_boolean"></block>
+<block type="logic_null"></block>
+<block type="logic_ternary"></block>
+</category>
+<category name="Matematicas" colour="#2980B9">
+<block type="math_number"><field name="NUM">0</field></block>
+<block type="math_arithmetic"></block>
+<block type="math_single"></block>
+<block type="math_trig"></block>
+<block type="math_constant"></block>
+<block type="math_number_property"></block>
+<block type="math_round"></block>
+<block type="math_modulo"></block>
+<block type="math_constrain">
+  <value name="VALUE"><shadow type="math_number"><field name="NUM">50</field></shadow></value>
+  <value name="LOW"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+  <value name="HIGH"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+</block>
+<block type="math_random_int"></block>
+<block type="math_random_float"></block>
+</category>
+<category name="Funciones" colour="#795548" custom="PROCEDURE"></category>
+<category name="Variables" colour="#E67E22" custom="VARIABLE"></category>
+</xml>
 
-  <script>
-    // ============================================
-    // 1. INICIALIZAR WORKSPACE
-    // ============================================
-    const workspace = Blockly.inject('blocklyDiv', {
-      toolbox: document.getElementById('toolbox'),
-      trashcan: true,
-      zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
-      grid: { spacing: 20, length: 3, colour: '#ccc', snap: true }
+<script>
+// ========== MODELOS ESP32 ==========
+var MODELOS = {
+  dev: {name:"ESP32 Dev Module", info:"WiFi + BT Classic + BLE | 34 GPIOs | 2x DAC (GPIO25,26)", hasDac:true, hasBtClassic:true},
+  s3:  {name:"ESP32-S3", info:"WiFi + BLE 5.0 + USB OTG | 45 GPIOs | Sin DAC", hasDac:false, hasBtClassic:false},
+  c3:  {name:"ESP32-C3", info:"WiFi + BLE 5.0 | 22 GPIOs | Sin DAC | RISC-V", hasDac:false, hasBtClassic:false},
+  c6:  {name:"ESP32-C6", info:"WiFi 6 + BLE 5.0 + 802.15.4 | 30 GPIOs | Sin DAC | RISC-V", hasDac:false, hasBtClassic:false}
+};
+
+function cambiarModelo() {
+  var m = document.getElementById("espModel").value;
+  document.getElementById("modelInfo").textContent = MODELOS[m].info;
+  showStatus("Modelo seleccionado: " + MODELOS[m].name, "info");
+}
+
+// ========== BLOQUES PERSONALIZADOS ==========
+Blockly.Blocks["esp32_setup_loop"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput().appendField("ESP32");
+    this.appendStatementInput("SETUP").setCheck(null).appendField("setup");
+    this.appendStatementInput("LOOP").setCheck(null).appendField("loop");
+    this.setTooltip("Bloque principal.");
+    this.setDeletable(false);
+  }
+};
+
+Blockly.Blocks["esp32_pin_mode"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("pinMode GPIO")
+      .appendField(new Blockly.FieldNumber(2, 0, 48), "PIN")
+      .appendField(new Blockly.FieldDropdown([["OUTPUT","OUTPUT"],["INPUT","INPUT"],["INPUT_PULLUP","INPUT_PULLUP"],["INPUT_PULLDOWN","INPUT_PULLDOWN"]]), "MODE");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_digital_write"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("digitalWrite GPIO")
+      .appendField(new Blockly.FieldNumber(2, 0, 48), "PIN")
+      .appendField(new Blockly.FieldDropdown([["HIGH","HIGH"],["LOW","LOW"]]), "STATE");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_digital_read"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("digitalRead GPIO")
+      .appendField(new Blockly.FieldNumber(2, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["esp32_analog_read"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("analogRead GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Lee el valor ADC (0-4095 en ESP32 Dev/S3, 0-1023 en C3/C6).");
+  }
+};
+
+Blockly.Blocks["esp32_dac_write"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("dacWrite GPIO")
+      .appendField(new Blockly.FieldDropdown([["25","25"],["26","26"]]), "PIN");
+    this.appendValueInput("VALUE").setCheck("Number").appendField("valor 0-255");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Solo ESP32 Dev Module (GPIO25 y 26). S3/C3/C6 no tienen DAC.");
+  }
+};
+
+Blockly.Blocks["esp32_pwm_write"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("ledcWrite GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "PIN");
+    this.appendValueInput("VALUE").setCheck("Number").appendField("valor 0-255");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Salida PWM usando ledc. Canal automatico.");
+  }
+};
+
+Blockly.Blocks["esp32_ledc_attach"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("ledcAttach GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "PIN")
+      .appendField("frecuencia")
+      .appendField(new Blockly.FieldNumber(5000, 1, 40000000), "FREQ")
+      .appendField("resolucion bits")
+      .appendField(new Blockly.FieldNumber(8, 1, 20), "RES");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Configura un pin como salida PWM. El canal LEDC se asigna automaticamente.");
+  }
+};
+
+Blockly.Blocks["esp32_ledc_attach_channel"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("ledcAttachChannel GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "PIN")
+      .appendField("frecuencia")
+      .appendField(new Blockly.FieldNumber(5000, 1, 40000000), "FREQ")
+      .appendField("resolucion bits")
+      .appendField(new Blockly.FieldNumber(8, 1, 20), "RES")
+      .appendField("canal")
+      .appendField(new Blockly.FieldNumber(0, 0, 15), "CHANNEL");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Configura un pin como salida PWM en un canal LEDC especifico elegido por ti (0-15).");
+  }
+};
+
+Blockly.Blocks["esp32_ledc_write_channel"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("ledcWrite canal")
+      .appendField(new Blockly.FieldNumber(0, 0, 15), "CHANNEL");
+    this.appendValueInput("VALUE").setCheck("Number").appendField("duty 0-255");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Escribe el duty cycle PWM directamente sobre un canal LEDC (usalo junto con ledcAttachChannel).");
+  }
+};
+
+Blockly.Blocks["esp32_touch_read"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("touchRead GPIO")
+      .appendField(new Blockly.FieldNumber(4, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Sensor tactil capacitivo. Valor bajo = tocado.");
+  }
+};
+
+Blockly.Blocks["esp32_delay"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendValueInput("MS").setCheck("Number").appendField("delay");
+    this.appendDummyInput().appendField("ms");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_delay_micros"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendValueInput("US").setCheck("Number").appendField("delayMicroseconds");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_serial_begin"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput()
+      .appendField("Serial.begin")
+      .appendField(new Blockly.FieldDropdown([["115200","115200"],["9600","9600"],["57600","57600"]]), "BAUD");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_serial_print"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendValueInput("TEXT").setCheck(null).appendField("Serial.print");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_serial_println"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendValueInput("TEXT").setCheck(null).appendField("Serial.println");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_restart"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendDummyInput().appendField("ESP.restart()");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Reinicia el ESP32.");
+  }
+};
+
+Blockly.Blocks["esp32_deep_sleep"] = {
+  init: function() {
+    this.setColour("#007acc");
+    this.appendValueInput("SEC").setCheck("Number").appendField("deepSleep");
+    this.appendDummyInput().appendField("segundos");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Pone al ESP32 en modo de bajo consumo.");
+  }
+};
+
+// --- SALIDAS ---
+Blockly.Blocks["esp32_tone"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput().appendField("tone GPIO");
+    this.appendDummyInput().appendField(new Blockly.FieldNumber(18, 0, 48), "PIN");
+    this.appendValueInput("FREQ").setCheck("Number").appendField("frecuencia");
+    this.appendValueInput("DUR").setCheck("Number").appendField("duracion ms");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Emite un tono usando ledc en ESP32.");
+  }
+};
+
+Blockly.Blocks["esp32_no_tone"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput().appendField("noTone GPIO").appendField(new Blockly.FieldNumber(18, 0, 48), "PIN");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_rgb"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput().appendField("LED RGB");
+    this.appendDummyInput().appendField("R GPIO").appendField(new Blockly.FieldNumber(25, 0, 48), "R");
+    this.appendDummyInput().appendField("G GPIO").appendField(new Blockly.FieldNumber(26, 0, 48), "G");
+    this.appendDummyInput().appendField("B GPIO").appendField(new Blockly.FieldNumber(27, 0, 48), "B");
+    this.appendValueInput("RVAL").setCheck("Number").appendField("rojo");
+    this.appendValueInput("GVAL").setCheck("Number").appendField("verde");
+    this.appendValueInput("BVAL").setCheck("Number").appendField("azul");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Controla LED RGB con PWM (ledc).");
+  }
+};
+
+Blockly.Blocks["esp32_neopixel_begin"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput()
+      .appendField("NeoPixel GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "PIN")
+      .appendField("LEDs")
+      .appendField(new Blockly.FieldNumber(8, 1, 300), "COUNT");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_neopixel_color"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput().appendField("NeoPixel LED").appendField(new Blockly.FieldNumber(0, 0, 299), "INDEX");
+    this.appendValueInput("RVAL").setCheck("Number").appendField("rojo");
+    this.appendValueInput("GVAL").setCheck("Number").appendField("verde");
+    this.appendValueInput("BVAL").setCheck("Number").appendField("azul");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_neopixel_fill"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput().appendField("NeoPixel pintar todo");
+    this.appendValueInput("RVAL").setCheck("Number").appendField("rojo");
+    this.appendValueInput("GVAL").setCheck("Number").appendField("verde");
+    this.appendValueInput("BVAL").setCheck("Number").appendField("azul");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_neopixel_apagar"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput().appendField("NeoPixel apagar todo");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_servo_attach"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput().appendField("Servo.attach GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "PIN");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_servo_write"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendValueInput("ANGLE").setCheck("Number").appendField("Servo.write angulo");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_servo360_write"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendValueInput("SPEED").setCheck("Number").appendField("Servo 360 velocidad");
+    this.appendDummyInput()
+      .appendField("(0=MAX CW, 90=detener, 180=MAX CCW)");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Servo de rotacion continua (360). 90 = detenido. 0-89 = CW. 91-180 = CCW.");
+  }
+};
+
+Blockly.Blocks["esp32_motor"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput()
+      .appendField("motor DC IN1 GPIO")
+      .appendField(new Blockly.FieldNumber(16, 0, 48), "IN1")
+      .appendField("IN2 GPIO")
+      .appendField(new Blockly.FieldNumber(17, 0, 48), "IN2");
+    this.appendDummyInput()
+      .appendField("ENABLE (PWM) GPIO")
+      .appendField(new Blockly.FieldNumber(4, 0, 48), "ENABLE");
+    this.appendDummyInput()
+      .appendField("direccion")
+      .appendField(new Blockly.FieldDropdown([["adelante","FORWARD"],["atras","BACKWARD"],["detener","STOP"]]), "DIR");
+    this.appendValueInput("SPEED").setCheck("Number").appendField("velocidad PWM");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Controla un motor DC con puente H. IN1/IN2 solo definen direccion (digital); ENABLE lleva la velocidad por PWM.");
+  }
+};
+
+Blockly.Blocks["esp32_relay"] = {
+  init: function() {
+    this.setColour("#E74C3C");
+    this.appendDummyInput()
+      .appendField("rele GPIO")
+      .appendField(new Blockly.FieldNumber(23, 0, 48), "PIN")
+      .appendField(new Blockly.FieldDropdown([["encender","HIGH"],["apagar","LOW"]]), "STATE");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+// --- MOTORES PASO A PASO (DRIVER STEP/DIR) ---
+Blockly.Blocks["esp32_stepper_driver_begin"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendDummyInput()
+      .appendField("Motor Paso a Paso (Driver) STEP GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "STEP")
+      .appendField("DIR GPIO")
+      .appendField(new Blockly.FieldNumber(19, 0, 48), "DIR");
+    this.appendDummyInput()
+      .appendField("pasos/rev")
+      .appendField(new Blockly.FieldNumber(200, 1, 10000), "SPR")
+      .appendField("ENABLE GPIO (opc)")
+      .appendField(new Blockly.FieldNumber(-1, -1, 48), "EN");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Configura un motor paso a paso con driver tipo A4988, DRV8825 o TMC2208. Usa 2 pines: STEP y DIR. ENABLE es opcional (-1 para no usar).");
+  }
+};
+
+Blockly.Blocks["esp32_stepper_driver_move"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendDummyInput()
+      .appendField("mover pasos STEP GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "STEP")
+      .appendField("DIR GPIO")
+      .appendField(new Blockly.FieldNumber(19, 0, 48), "DIR");
+    this.appendValueInput("STEPS").setCheck("Number").appendField("pasos");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Positivo = sentido horario, negativo = antihorario.");
+  }
+};
+
+Blockly.Blocks["esp32_stepper_driver_rotate"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendDummyInput()
+      .appendField("girar grados STEP GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "STEP")
+      .appendField("DIR GPIO")
+      .appendField(new Blockly.FieldNumber(19, 0, 48), "DIR");
+    this.appendValueInput("DEG").setCheck("Number").appendField("grados");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Gira el motor una cantidad de grados. Requiere haber configurado pasos/rev.");
+  }
+};
+
+Blockly.Blocks["esp32_stepper_driver_speed"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendDummyInput()
+      .appendField("velocidad motor STEP GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "STEP");
+    this.appendValueInput("RPM").setCheck("Number").appendField("RPM");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Velocidad en revoluciones por minuto. Maximo depende del motor y driver.");
+  }
+};
+
+Blockly.Blocks["esp32_stepper_driver_stop"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendDummyInput()
+      .appendField("detener motor ENABLE GPIO")
+      .appendField(new Blockly.FieldNumber(-1, -1, 48), "EN");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Desactiva el driver poniendo ENABLE en HIGH (si esta conectado).");
+  }
+};
+
+// --- MOTORES PASO A PASO (4 CABLES DIRECTO) ---
+Blockly.Blocks["esp32_stepper_4wire_begin"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendDummyInput()
+      .appendField("Motor 4 cables IN1")
+      .appendField(new Blockly.FieldNumber(16, 0, 48), "IN1")
+      .appendField("IN2")
+      .appendField(new Blockly.FieldNumber(17, 0, 48), "IN2")
+      .appendField("IN3")
+      .appendField(new Blockly.FieldNumber(5, 0, 48), "IN3")
+      .appendField("IN4")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "IN4");
+    this.appendDummyInput()
+      .appendField("pasos por revolucion")
+      .appendField(new Blockly.FieldNumber(2048, 1, 10000), "SPR");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Motor paso a paso de 4 cables (28BYJ-48 o similar) controlado directamente. Requiere libreria Stepper.");
+  }
+};
+
+Blockly.Blocks["esp32_stepper_4wire_move"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendValueInput("STEPS").setCheck("Number").appendField("mover pasos");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Positivo = horario, negativo = antihorario.");
+  }
+};
+
+Blockly.Blocks["esp32_stepper_4wire_speed"] = {
+  init: function() {
+    this.setColour("#E67E22");
+    this.appendValueInput("RPM").setCheck("Number").appendField("velocidad RPM");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+// --- SENSORES ---
+Blockly.Blocks["esp32_button"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("pulsador GPIO")
+      .appendField(new Blockly.FieldNumber(0, 0, 48), "PIN");
+    this.setOutput(true, "Boolean");
+    this.setTooltip("Lee un pulsador con INPUT_PULLUP.");
+  }
+};
+
+Blockly.Blocks["esp32_potentiometer"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("potenciometro GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Lee potenciometro por ADC (0-4095).");
+  }
+};
+
+Blockly.Blocks["esp32_ldr"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("sensor de luz (LDR) GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Lee intensidad de luz por ADC.");
+  }
+};
+
+Blockly.Blocks["esp32_dht_temp"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("DHT temperatura GPIO")
+      .appendField(new Blockly.FieldNumber(4, 0, 48), "PIN")
+      .appendField("tipo")
+      .appendField(new Blockly.FieldDropdown([["DHT11","DHT11"],["DHT22","DHT22"]]), "TYPE");
+    this.setOutput(true, "Number");
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_dht_hum"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("DHT humedad GPIO")
+      .appendField(new Blockly.FieldNumber(4, 0, 48), "PIN")
+      .appendField("tipo")
+      .appendField(new Blockly.FieldDropdown([["DHT11","DHT11"],["DHT22","DHT22"]]), "TYPE");
+    this.setOutput(true, "Number");
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_ultrasonic_read"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput().appendField("ultrasonido trig GPIO");
+    this.appendDummyInput().appendField(new Blockly.FieldNumber(5, 0, 48), "TRIG");
+    this.appendDummyInput().appendField("echo GPIO");
+    this.appendDummyInput().appendField(new Blockly.FieldNumber(18, 0, 48), "ECHO");
+    this.setOutput(true, "Number");
+    this.setInputsInline(true);
+    this.setTooltip("Distancia en cm con HC-SR04.");
+  }
+};
+
+Blockly.Blocks["esp32_hall_read"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput().appendField("hallRead()");
+    this.setOutput(true, "Number");
+    this.setTooltip("Sensor Hall interno del ESP32 (sin pines externos).");
+  }
+};
+
+Blockly.Blocks["esp32_ky038_digital"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("sonido KY-038 digital GPIO")
+      .appendField(new Blockly.FieldNumber(27, 0, 48), "PIN");
+    this.setOutput(true, "Boolean");
+    this.setTooltip("Salida digital (DO) del KY-038: true si el sonido supera el umbral (ajustable con el potenciometro del modulo). Verifica la logica de tu modulo, puede variar segun el fabricante.");
+  }
+};
+
+Blockly.Blocks["esp32_ky038_analog"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("sonido KY-038 analogico GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Salida analogica (AO) del KY-038: nivel de sonido por ADC (0-4095).");
+  }
+};
+
+Blockly.Blocks["esp32_soil_moisture"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("humedad de suelo GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Higrometro de humedad de suelo (salida analogica). Valor alto = tierra seca, valor bajo = tierra humeda.");
+  }
+};
+
+Blockly.Blocks["esp32_rain_sensor"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("sensor de lluvia GPIO")
+      .appendField(new Blockly.FieldNumber(35, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Sensor de lluvia (salida analogica). Valor bajo = mas agua detectada sobre la placa.");
+  }
+};
+
+Blockly.Blocks["esp32_flame_sensor"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("sensor de llama GPIO")
+      .appendField(new Blockly.FieldNumber(26, 0, 48), "PIN");
+    this.setOutput(true, "Boolean");
+    this.setTooltip("Sensor de llama por infrarrojo (salida digital). true = fuego detectado. La mayoria de modulos son activos en LOW; revisa el tuyo.");
+  }
+};
+
+Blockly.Blocks["esp32_ir_obstacle"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("sensor IR obstaculo GPIO")
+      .appendField(new Blockly.FieldNumber(25, 0, 48), "PIN");
+    this.setOutput(true, "Boolean");
+    this.setTooltip("Sensor infrarrojo de obstaculos/linea (salida digital). true = objeto detectado. La mayoria de modulos son activos en LOW; revisa el tuyo.");
+  }
+};
+
+Blockly.Blocks["esp32_tds_read"] = {
+  init: function() {
+    this.setColour("#9B59B6");
+    this.appendDummyInput()
+      .appendField("sensor TDS (calidad agua) GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Sensor TDS (Total Dissolved Solids). Lee conductividad electrica del agua y devuelve valor en ppm. Conecta a pin ADC. No requiere libreria externa.");
+  }
+};
+
+
+Blockly.Blocks["esp32_bmp280_begin"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("BMP280 iniciar direccion")
+      .appendField(new Blockly.FieldDropdown([["0x76","0x76"],["0x77","0x77"]]), "ADDR");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Inicializa el sensor BMP280 por I2C.");
+  }
+};
+
+Blockly.Blocks["esp32_bmp280_temp"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("BMP280 temperatura °C");
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["esp32_bmp280_pres"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("BMP280 presion hPa");
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["esp32_bmp280_alt"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("BMP280 altitud m");
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["esp32_mq2_read"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("MQ2 gas/humo GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Lee valor analogico del sensor MQ2 (0-4095).");
+  }
+};
+
+Blockly.Blocks["esp32_mq3_read"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("MQ3 alcohol GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Lee valor analogico del sensor MQ3 (0-4095).");
+  }
+};
+
+Blockly.Blocks["esp32_mq135_read"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("MQ135 calidad aire GPIO")
+      .appendField(new Blockly.FieldNumber(34, 0, 48), "PIN");
+    this.setOutput(true, "Number");
+    this.setTooltip("Lee valor analogico del sensor MQ135 (0-4095).");
+  }
+};
+
+Blockly.Blocks["esp32_pir_read"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("PIR movimiento GPIO")
+      .appendField(new Blockly.FieldNumber(27, 0, 48), "PIN");
+    this.setOutput(true, "Boolean");
+    this.setTooltip("HIGH = movimiento detectado.");
+  }
+};
+
+Blockly.Blocks["esp32_ld2410_begin"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("HLK-LD2410C RX GPIO")
+      .appendField(new Blockly.FieldNumber(16, 0, 48), "RX")
+      .appendField("TX GPIO")
+      .appendField(new Blockly.FieldNumber(17, 0, 48), "TX");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Usa Serial1 a 256000 baud. Requiere libreria ld2410.");
+  }
+};
+
+Blockly.Blocks["esp32_ld2410_presence"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("HLK-LD2410C presencia?");
+    this.setOutput(true, "Boolean");
+  }
+};
+
+Blockly.Blocks["esp32_ld2410_distance"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("HLK-LD2410C distancia cm");
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["esp32_tcs3200_begin"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("TCS3200 S2 GPIO")
+      .appendField(new Blockly.FieldNumber(19, 0, 48), "S2")
+      .appendField("S3 GPIO")
+      .appendField(new Blockly.FieldNumber(21, 0, 48), "S3")
+      .appendField("OUT GPIO")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "OUT");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("S0/S1 a 3.3V. No requiere libreria.");
+  }
+};
+
+Blockly.Blocks["esp32_tcs3200_read"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("TCS3200 leer")
+      .appendField(new Blockly.FieldDropdown([["rojo","RED"],["verde","GREEN"],["azul","BLUE"],["clear","CLEAR"]]), "COLOR")
+      .appendField("S2")
+      .appendField(new Blockly.FieldNumber(19, 0, 48), "S2")
+      .appendField("S3")
+      .appendField(new Blockly.FieldNumber(21, 0, 48), "S3")
+      .appendField("OUT")
+      .appendField(new Blockly.FieldNumber(18, 0, 48), "OUT");
+    this.setOutput(true, "Number");
+    this.setTooltip("Duracion pulso en us.");
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_rfid_begin"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("RFID SS GPIO")
+      .appendField(new Blockly.FieldNumber(5, 0, 48), "SS")
+      .appendField("RST GPIO")
+      .appendField(new Blockly.FieldNumber(22, 0, 48), "RST");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Inicializa MFRC522 por SPI.");
+  }
+};
+
+Blockly.Blocks["esp32_rfid_present"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("RFID tarjeta presente?");
+    this.setOutput(true, "Boolean");
+  }
+};
+
+Blockly.Blocks["esp32_rfid_read_uid"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("RFID leer UID");
+    this.setOutput(true, null);
+    this.setTooltip("Devuelve UID como String hex.");
+  }
+};
+
+Blockly.Blocks["esp32_inmp441_begin"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("INMP441 iniciar WS(LRCL) GPIO")
+      .appendField(new Blockly.FieldNumber(25, 0, 48), "WS")
+      .appendField("SCK(BCLK) GPIO")
+      .appendField(new Blockly.FieldNumber(26, 0, 48), "SCK")
+      .appendField("SD GPIO")
+      .appendField(new Blockly.FieldNumber(33, 0, 48), "SD");
+    this.appendDummyInput()
+      .appendField("frecuencia muestreo")
+      .appendField(new Blockly.FieldDropdown([["16000","16000"],["22050","22050"],["44100","44100"]]), "RATE");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+    this.setTooltip("Inicializa el microfono I2S INMP441 (I2S_NUM_0, mono, canal izquierdo -> pin L/R a GND).");
+  }
+};
+
+Blockly.Blocks["esp32_inmp441_read_level"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("INMP441 nivel de sonido");
+    this.setOutput(true, "Number");
+    this.setTooltip("Lee un bloque de muestras de audio y devuelve el nivel promedio (amplitud absoluta).");
+  }
+};
+
+Blockly.Blocks["esp32_ds18b20_begin"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("DS18B20 iniciar GPIO")
+      .appendField(new Blockly.FieldNumber(4, 0, 48), "PIN");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Sensor de temperatura sumergible DS18B20 (bus OneWire). Requiere resistencia pull-up de 4.7k entre datos y VCC.");
+  }
+};
+
+Blockly.Blocks["esp32_ds18b20_read"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("DS18B20 temperatura °C");
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["esp32_mpu6050_begin"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput().appendField("MPU6050 iniciar (I2C)");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Inicializa el acelerometro/giroscopio MPU6050 por I2C (pines SDA/SCL por defecto de la placa).");
+  }
+};
+
+Blockly.Blocks["esp32_mpu6050_accel"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("MPU6050 aceleracion eje")
+      .appendField(new Blockly.FieldDropdown([["X","X"],["Y","Y"],["Z","Z"]]), "AXIS");
+    this.setOutput(true, "Number");
+    this.setTooltip("Aceleracion en m/s^2.");
+  }
+};
+
+Blockly.Blocks["esp32_mpu6050_gyro"] = {
+  init: function() {
+    this.setColour("#C0392B");
+    this.appendDummyInput()
+      .appendField("MPU6050 giroscopio eje")
+      .appendField(new Blockly.FieldDropdown([["X","X"],["Y","Y"],["Z","Z"]]), "AXIS");
+    this.setOutput(true, "Number");
+    this.setTooltip("Velocidad angular en rad/s.");
+  }
+};
+
+// --- WIFI ---
+Blockly.Blocks["esp32_wifi_begin"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendDummyInput().appendField("WiFi.connect");
+    this.appendValueInput("SSID").setCheck(null).appendField("SSID");
+    this.appendValueInput("PASS").setCheck(null).appendField("password");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_wifi_ap"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendDummyInput().appendField("WiFi.softAP");
+    this.appendValueInput("SSID").setCheck(null).appendField("nombre");
+    this.appendValueInput("PASS").setCheck(null).appendField("password");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_wifi_connected"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendDummyInput().appendField("WiFi conectado?");
+    this.setOutput(true, "Boolean");
+  }
+};
+
+Blockly.Blocks["esp32_wifi_localip"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendDummyInput().appendField("WiFi.localIP()");
+    this.setOutput(true, null);
+    this.setTooltip("Devuelve la IP local como texto.");
+  }
+};
+
+Blockly.Blocks["esp32_wifi_scan"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendDummyInput().appendField("WiFi.scanNetworks()");
+    this.setOutput(true, "Number");
+    this.setTooltip("Escanea y devuelve la cantidad de redes encontradas.");
+  }
+};
+
+Blockly.Blocks["esp32_web_server_begin"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendValueInput("PORT").setCheck("Number").appendField("WebServer iniciar puerto");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_web_server_on"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendValueInput("PATH").setCheck(null).appendField("WebServer.on ruta");
+    this.appendStatementInput("DO").setCheck(null).appendField("hacer");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_web_server_handle"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendDummyInput().appendField("WebServer.handleClient()");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Debe ir en el loop para atender peticiones web.");
+  }
+};
+
+Blockly.Blocks["esp32_web_send"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendValueInput("TEXT").setCheck(null).appendField("WebServer.send(200, text/html,)");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_http_get"] = {
+  init: function() {
+    this.setColour("#D35400");
+    this.appendValueInput("URL").setCheck(null).appendField("HTTP GET");
+    this.setOutput(true, null);
+    this.setTooltip("Realiza una peticion GET y devuelve el codigo de respuesta.");
+  }
+};
+
+// --- BLUETOOTH BLE ---
+Blockly.Blocks["esp32_ble_begin"] = {
+  init: function() {
+    this.setColour("#3498DB");
+    this.appendDummyInput()
+      .appendField("BLE iniciar nombre")
+      .appendField(new Blockly.FieldTextInput("ESP32_BLE"), "NAME");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Inicia el servidor BLE. Compatible S3, C3, C6.");
+  }
+};
+
+Blockly.Blocks["esp32_ble_set_value"] = {
+  init: function() {
+    this.setColour("#3498DB");
+    this.appendValueInput("VAL").setCheck(null).appendField("BLE enviar valor");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_ble_get_value"] = {
+  init: function() {
+    this.setColour("#3498DB");
+    this.appendDummyInput().appendField("BLE valor recibido");
+    this.setOutput(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_ble_notify"] = {
+  init: function() {
+    this.setColour("#3498DB");
+    this.appendDummyInput().appendField("BLE notificar cambios");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Notifica a los clientes BLE que el valor cambio.");
+  }
+};
+
+Blockly.Blocks["esp32_ble_connected"] = {
+  init: function() {
+    this.setColour("#3498DB");
+    this.appendDummyInput().appendField("BLE cliente conectado?");
+    this.setOutput(true, "Boolean");
+  }
+};
+
+// --- ESP32 NOW ---
+Blockly.Blocks["esp32_now_begin"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput().appendField("ESP-NOW iniciar");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Inicializa ESP-NOW. El WiFi se pone en modo STA automaticamente.");
+  }
+};
+
+Blockly.Blocks["esp32_now_add_peer"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput()
+      .appendField("ESP-NOW añadir peer MAC")
+      .appendField(new Blockly.FieldTextInput("FF:FF:FF:FF:FF:FF"), "MAC");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Añade un peer con la MAC indicada. Usa FF:FF:FF:FF:FF:FF para broadcast.");
+  }
+};
+
+Blockly.Blocks["esp32_now_get_mac"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput().appendField("ESP-NOW obtener mi MAC");
+    this.setOutput(true, null);
+    this.setTooltip("Devuelve la direccion MAC del dispositivo como texto.");
+  }
+};
+
+Blockly.Blocks["esp32_now_send_text"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput()
+      .appendField("ESP-NOW enviar texto a MAC")
+      .appendField(new Blockly.FieldTextInput("FF:FF:FF:FF:FF:FF"), "MAC");
+    this.appendValueInput("TEXT").setCheck(null).appendField("texto");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_now_send_number"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput()
+      .appendField("ESP-NOW enviar numero a MAC")
+      .appendField(new Blockly.FieldTextInput("FF:FF:FF:FF:FF:FF"), "MAC");
+    this.appendValueInput("NUM").setCheck("Number").appendField("numero");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_now_on_receive"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput().appendField("ESP-NOW al recibir datos");
+    this.appendStatementInput("DO").setCheck(null).appendField("hacer");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Coloca este bloque dentro del loop. Se ejecuta cuando llegan datos.");
+  }
+};
+
+Blockly.Blocks["esp32_now_received_text"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput().appendField("ESP-NOW texto recibido");
+    this.setOutput(true, null);
+    this.setTooltip("Solo valido dentro del bloque 'al recibir datos'.");
+  }
+};
+
+Blockly.Blocks["esp32_now_received_number"] = {
+  init: function() {
+    this.setColour("#8E44AD");
+    this.appendDummyInput().appendField("ESP-NOW numero recibido");
+    this.setOutput(true, "Number");
+    this.setTooltip("Solo valido dentro del bloque 'al recibir datos'.");
+  }
+};
+
+// --- PANTALLAS ---
+Blockly.Blocks["esp32_lcd_begin"] = {
+  init: function() {
+    this.setColour("#16A085");
+    this.appendDummyInput()
+      .appendField("LCD I2C direccion")
+      .appendField(new Blockly.FieldDropdown([["0x27","0x27"],["0x3F","0x3F"]]), "DIR");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("LCD 16x2 por I2C. SDA/SCL varian segun modelo.");
+  }
+};
+
+Blockly.Blocks["esp32_lcd_clear"] = {
+  init: function() {
+    this.setColour("#16A085");
+    this.appendDummyInput().appendField("LCD limpiar");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_lcd_print"] = {
+  init: function() {
+    this.setColour("#16A085");
+    this.appendDummyInput()
+      .appendField("LCD escribir col")
+      .appendField(new Blockly.FieldNumber(0, 0, 15), "COL")
+      .appendField("fila")
+      .appendField(new Blockly.FieldDropdown([["1","0"],["2","1"]]), "ROW");
+    this.appendValueInput("TEXT").setCheck(null).appendField("texto");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_oled_begin"] = {
+  init: function() {
+    this.setColour("#16A085");
+    this.appendDummyInput()
+      .appendField("OLED I2C direccion")
+      .appendField(new Blockly.FieldDropdown([["0x3C","0x3C"],["0x3D","0x3D"]]), "DIR");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_oled_clear"] = {
+  init: function() {
+    this.setColour("#16A085");
+    this.appendDummyInput().appendField("OLED limpiar");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+  }
+};
+
+Blockly.Blocks["esp32_oled_print"] = {
+  init: function() {
+    this.setColour("#16A085");
+    this.appendDummyInput()
+      .appendField("OLED escribir linea")
+      .appendField(new Blockly.FieldDropdown([["1","0"],["2","1"],["3","2"],["4","3"],["5","4"],["6","5"],["7","6"],["8","7"]]), "LINE");
+    this.appendValueInput("TEXT").setCheck(null).appendField("texto");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setInputsInline(true);
+  }
+};
+
+// --- UTILIDADES ---
+Blockly.Blocks["esp32_map"] = {
+  init: function() {
+    this.setColour("#F39C12");
+    this.appendValueInput("VAL").setCheck("Number").appendField("map valor");
+    this.appendValueInput("FROM_LOW").setCheck("Number").appendField("desde min");
+    this.appendValueInput("FROM_HIGH").setCheck("Number").appendField("max");
+    this.appendValueInput("TO_LOW").setCheck("Number").appendField("a min");
+    this.appendValueInput("TO_HIGH").setCheck("Number").appendField("max");
+    this.setOutput(true, "Number");
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_millis"] = {
+  init: function() {
+    this.setColour("#F39C12");
+    this.appendDummyInput().appendField("millis()");
+    this.setOutput(true, "Number");
+    this.setTooltip("Milisegundos desde el encendido.");
+  }
+};
+
+Blockly.Blocks["esp32_random"] = {
+  init: function() {
+    this.setColour("#F39C12");
+    this.appendValueInput("MIN").setCheck("Number").appendField("random desde");
+    this.appendValueInput("MAX").setCheck("Number").appendField("hasta");
+    this.setOutput(true, "Number");
+    this.setInputsInline(true);
+  }
+};
+
+Blockly.Blocks["esp32_random_seed"] = {
+  init: function() {
+    this.setColour("#F39C12");
+    this.appendDummyInput().appendField("randomSeed(analogRead(34))");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip("Inicializa la semilla aleatoria con ruido del ADC.");
+  }
+};
+
+// ========== GENERADOR ESP32 ==========
+try {
+  if (!Blockly.Arduino) {
+    Blockly.Arduino = new Blockly.Generator("Arduino");
+  }
+} catch(e) {
+  console.error("Error creando generador:", e);
+}
+
+var Arduino = Blockly.Arduino;
+Arduino.ORDER_ATOMIC = 0;
+Arduino.ORDER_NONE = 99;
+
+Arduino.init = function(workspace) {
+  this.definitions_ = Object.create(null);
+  this.functionNames_ = Object.create(null);
+  this.setups_ = Object.create(null);
+  this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_ || "");
+  this.nameDB_.setVariableMap(workspace.getVariableMap());
+  this.nameDB_.populateVariables(workspace);
+  this.nameDB_.populateProcedures(workspace);
+};
+
+Arduino.finish = function(code) {
+  var definitions = [];
+  for (var name in this.definitions_) { definitions.push(this.definitions_[name]); }
+  this.definitions_ = Object.create(null);
+  this.functionNames_ = Object.create(null);
+  if (this.nameDB_) this.nameDB_.reset();
+  return definitions.join("\n") + "\n" + code;
+};
+
+Arduino.scrub_ = function(block, code, opt_thisOnly) {
+  var nextBlock = block.nextConnection && block.nextConnection.targetBlock();
+  var nextCode = opt_thisOnly ? "" : this.blockToCode(nextBlock);
+  return code + nextCode;
+};
+
+// --- ESP32 ---
+Arduino["esp32_setup_loop"] = function(block) {
+  var setupCode = Arduino.statementToCode(block, "SETUP");
+  var loopCode = Arduino.statementToCode(block, "LOOP");
+  var autoSetup = "";
+  for (var name in Arduino.setups_) { autoSetup += Arduino.setups_[name]; }
+  return "void setup(){\n" + autoSetup + (setupCode || "\n") + "}\n\nvoid loop(){\n" + (loopCode || "\n") + "}\n";
+};
+
+Arduino["esp32_pin_mode"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var mode = block.getFieldValue("MODE");
+  return "pinMode(" + pin + "," + mode + ");\n";
+};
+
+Arduino["esp32_digital_write"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var state = block.getFieldValue("STATE");
+  return "digitalWrite(" + pin + "," + state + ");\n";
+};
+
+Arduino["esp32_digital_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["digitalRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_analog_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_dac_write"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var val = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_ATOMIC) || "0";
+  return "dacWrite(" + pin + "," + val + ");\n";
+};
+
+Arduino["esp32_pwm_write"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var val = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_ATOMIC) || "0";
+  Arduino.setups_["pwm_setup_" + pin] = "  ledcAttachChannel(" + pin + ", 5000, 8, " + pin + ");\n";
+  return "ledcWrite(" + pin + "," + val + ");\n";
+};
+
+Arduino["esp32_ledc_attach"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var freq = block.getFieldValue("FREQ");
+  var res = block.getFieldValue("RES");
+  return "ledcAttach(" + pin + ", " + freq + ", " + res + ");\n";
+};
+
+Arduino["esp32_ledc_attach_channel"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var freq = block.getFieldValue("FREQ");
+  var res = block.getFieldValue("RES");
+  var channel = block.getFieldValue("CHANNEL");
+  return "ledcAttachChannel(" + pin + ", " + freq + ", " + res + ", " + channel + ");\n";
+};
+
+Arduino["esp32_ledc_write_channel"] = function(block) {
+  var channel = block.getFieldValue("CHANNEL");
+  var val = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_ATOMIC) || "0";
+  return "ledcWriteChannel(" + channel + "," + val + ");\n";
+};
+
+Arduino["esp32_touch_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["touchRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_delay"] = function(block) {
+  var ms = Arduino.valueToCode(block, "MS", Arduino.ORDER_ATOMIC) || "1000";
+  return "delay(" + ms + ");\n";
+};
+
+Arduino["esp32_delay_micros"] = function(block) {
+  var us = Arduino.valueToCode(block, "US", Arduino.ORDER_ATOMIC) || "100";
+  return "delayMicroseconds(" + us + ");\n";
+};
+
+Arduino["esp32_serial_begin"] = function(block) {
+  var baud = block.getFieldValue("BAUD");
+  return "Serial.begin(" + baud + ");\n";
+};
+
+Arduino["esp32_serial_print"] = function(block) {
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_ATOMIC) || '""';
+  return "Serial.print(" + text + ");\n";
+};
+
+Arduino["esp32_serial_println"] = function(block) {
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_ATOMIC) || '""';
+  return "Serial.println(" + text + ");\n";
+};
+
+Arduino["esp32_restart"] = function(block) {
+  return "ESP.restart();\n";
+};
+
+Arduino["esp32_deep_sleep"] = function(block) {
+  var sec = Arduino.valueToCode(block, "SEC", Arduino.ORDER_ATOMIC) || "10";
+  return "esp_sleep_enable_timer_wakeup(" + sec + " * 1000000ULL);\n  esp_deep_sleep_start();\n";
+};
+
+// --- SALIDAS ---
+Arduino["esp32_tone"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var freq = Arduino.valueToCode(block, "FREQ", Arduino.ORDER_ATOMIC) || "1000";
+  var dur = Arduino.valueToCode(block, "DUR", Arduino.ORDER_ATOMIC) || "500";
+  Arduino.setups_["tone_setup_" + pin] = "  ledcAttachChannel(" + pin + ", 2000, 8, " + pin + ");\n";
+  return "ledcWriteTone(" + pin + "," + freq + ");\n  delay(" + dur + ");\n  ledcWriteTone(" + pin + ",0);\n";
+};
+
+Arduino["esp32_no_tone"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return "ledcWriteTone(" + pin + ",0);\n";
+};
+
+Arduino["esp32_rgb"] = function(block) {
+  var r = block.getFieldValue("R");
+  var g = block.getFieldValue("G");
+  var b = block.getFieldValue("B");
+  var rval = Arduino.valueToCode(block, "RVAL", Arduino.ORDER_ATOMIC) || "0";
+  var gval = Arduino.valueToCode(block, "GVAL", Arduino.ORDER_ATOMIC) || "0";
+  var bval = Arduino.valueToCode(block, "BVAL", Arduino.ORDER_ATOMIC) || "0";
+  Arduino.setups_["pwm_r_" + r] = "  ledcAttachChannel(" + r + ", 5000, 8, " + r + ");\n";
+  Arduino.setups_["pwm_g_" + g] = "  ledcAttachChannel(" + g + ", 5000, 8, " + g + ");\n";
+  Arduino.setups_["pwm_b_" + b] = "  ledcAttachChannel(" + b + ", 5000, 8, " + b + ");\n";
+  return "ledcWrite(" + r + "," + rval + ");\n  ledcWrite(" + g + "," + gval + ");\n  ledcWrite(" + b + "," + bval + ");\n";
+};
+
+Arduino["esp32_neopixel_begin"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var count = block.getFieldValue("COUNT");
+  Arduino.definitions_["include_neopixel"] = "#include <Adafruit_NeoPixel.h>";
+  Arduino.definitions_["var_strip"] = "Adafruit_NeoPixel strip(" + count + ", " + pin + ", NEO_GRB + NEO_KHZ800);";
+  return "strip.begin();\n  strip.show();\n";
+};
+
+Arduino["esp32_neopixel_color"] = function(block) {
+  var index = block.getFieldValue("INDEX");
+  var r = Arduino.valueToCode(block, "RVAL", Arduino.ORDER_ATOMIC) || "0";
+  var g = Arduino.valueToCode(block, "GVAL", Arduino.ORDER_ATOMIC) || "0";
+  var b = Arduino.valueToCode(block, "BVAL", Arduino.ORDER_ATOMIC) || "0";
+  return "strip.setPixelColor(" + index + ", strip.Color(" + r + "," + g + "," + b + "));\n  strip.show();\n";
+};
+
+Arduino["esp32_neopixel_fill"] = function(block) {
+  var r = Arduino.valueToCode(block, "RVAL", Arduino.ORDER_ATOMIC) || "0";
+  var g = Arduino.valueToCode(block, "GVAL", Arduino.ORDER_ATOMIC) || "0";
+  var b = Arduino.valueToCode(block, "BVAL", Arduino.ORDER_ATOMIC) || "0";
+  return "strip.fill(strip.Color(" + r + "," + g + "," + b + "));\n  strip.show();\n";
+};
+
+Arduino["esp32_neopixel_apagar"] = function(block) {
+  return "strip.clear();\n  strip.show();\n";
+};
+
+Arduino["esp32_servo_attach"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  Arduino.definitions_["include_servo"] = "#include <ESP32Servo.h>";
+  Arduino.definitions_["var_servo"] = "Servo myServo;";
+  return "myServo.attach(" + pin + ");\n";
+};
+
+Arduino["esp32_servo_write"] = function(block) {
+  var angle = Arduino.valueToCode(block, "ANGLE", Arduino.ORDER_ATOMIC) || "90";
+  Arduino.definitions_["include_servo"] = "#include <ESP32Servo.h>";
+  Arduino.definitions_["var_servo"] = "Servo myServo;";
+  return "myServo.write(" + angle + ");\n";
+};
+
+Arduino["esp32_servo360_write"] = function(block) {
+  var speed = Arduino.valueToCode(block, "SPEED", Arduino.ORDER_ATOMIC) || "90";
+  Arduino.definitions_["include_servo"] = "#include <ESP32Servo.h>";
+  Arduino.definitions_["var_servo"] = "Servo myServo;";
+  return "myServo.write(" + speed + ");\n";
+};
+
+Arduino["esp32_motor"] = function(block) {
+  var in1 = block.getFieldValue("IN1");
+  var in2 = block.getFieldValue("IN2");
+  var enable = block.getFieldValue("ENABLE");
+  var dir = block.getFieldValue("DIR");
+  var speed = Arduino.valueToCode(block, "SPEED", Arduino.ORDER_ATOMIC) || "255";
+  Arduino.setups_["motor_in1_" + in1] = "  pinMode(" + in1 + ",OUTPUT);\n";
+  Arduino.setups_["motor_in2_" + in2] = "  pinMode(" + in2 + ",OUTPUT);\n";
+  Arduino.setups_["pwm_en_" + enable] = "  ledcAttach(" + enable + ", 5000, 8);\n";
+  if (dir === "FORWARD") {
+    return "digitalWrite(" + in1 + ",HIGH);\n  digitalWrite(" + in2 + ",LOW);\n  ledcWrite(" + enable + "," + speed + ");\n";
+  } else if (dir === "BACKWARD") {
+    return "digitalWrite(" + in1 + ",LOW);\n  digitalWrite(" + in2 + ",HIGH);\n  ledcWrite(" + enable + "," + speed + ");\n";
+  } else {
+    return "digitalWrite(" + in1 + ",LOW);\n  digitalWrite(" + in2 + ",LOW);\n  ledcWrite(" + enable + ",0);\n";
+  }
+};
+
+Arduino["esp32_relay"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var state = block.getFieldValue("STATE");
+  return "digitalWrite(" + pin + "," + state + ");\n";
+};
+
+// --- MOTORES PASO A PASO (DRIVER STEP/DIR) ---
+Arduino["esp32_stepper_driver_begin"] = function(block) {
+  var step = block.getFieldValue("STEP");
+  var dir = block.getFieldValue("DIR");
+  var spr = block.getFieldValue("SPR");
+  var en = block.getFieldValue("EN");
+  Arduino.setups_["stepper_step_" + step] = "  pinMode(" + step + ", OUTPUT);\n";
+  Arduino.setups_["stepper_dir_" + dir] = "  pinMode(" + dir + ", OUTPUT);\n";
+  if (en >= 0) {
+    Arduino.setups_["stepper_en_" + en] = "  pinMode(" + en + ", OUTPUT);\n  digitalWrite(" + en + ", LOW);\n";
+  }
+  Arduino.definitions_["var_stepper_spr_" + step] = "const int stepper_spr_" + step + " = " + spr + ";";
+  Arduino.definitions_["var_stepper_delay_" + step] = "int stepper_delayUs_" + step + " = 1000;";
+  if (!Arduino.definitions_["func_stepper_move"]) {
+    Arduino.definitions_["func_stepper_move"] = 
+      "void stepperMove(int stepPin, int dirPin, int steps, int delayUs){\n" +
+      "  digitalWrite(dirPin, steps >= 0 ? HIGH : LOW);\n" +
+      "  int n = abs(steps);\n" +
+      "  for(int i=0; i<n; i++){\n" +
+      "    digitalWrite(stepPin, HIGH);\n" +
+      "    delayMicroseconds(delayUs);\n" +
+      "    digitalWrite(stepPin, LOW);\n" +
+      "    delayMicroseconds(delayUs);\n" +
+      "  }\n" +
+      "}";
+  }
+  if (!Arduino.definitions_["func_stepper_rotate"]) {
+    Arduino.definitions_["func_stepper_rotate"] = 
+      "void stepperRotate(int stepPin, int dirPin, int degrees, int spr, int delayUs){\n" +
+      "  int steps = (long)degrees * spr / 360;\n" +
+      "  stepperMove(stepPin, dirPin, steps, delayUs);\n" +
+      "}";
+  }
+  return "";
+};
+
+Arduino["esp32_stepper_driver_move"] = function(block) {
+  var step = block.getFieldValue("STEP");
+  var dir = block.getFieldValue("DIR");
+  var steps = Arduino.valueToCode(block, "STEPS", Arduino.ORDER_ATOMIC) || "0";
+  return "stepperMove(" + step + ", " + dir + ", " + steps + ", stepper_delayUs_" + step + ");\n";
+};
+
+Arduino["esp32_stepper_driver_rotate"] = function(block) {
+  var step = block.getFieldValue("STEP");
+  var dir = block.getFieldValue("DIR");
+  var deg = Arduino.valueToCode(block, "DEG", Arduino.ORDER_ATOMIC) || "0";
+  return "stepperRotate(" + step + ", " + dir + ", " + deg + ", stepper_spr_" + step + ", stepper_delayUs_" + step + ");\n";
+};
+
+Arduino["esp32_stepper_driver_speed"] = function(block) {
+  var step = block.getFieldValue("STEP");
+  var rpm = Arduino.valueToCode(block, "RPM", Arduino.ORDER_ATOMIC) || "60";
+  return "stepper_delayUs_" + step + " = 30000000 / (stepper_spr_" + step + " * " + rpm + ");\n  if(stepper_delayUs_" + step + " < 50) stepper_delayUs_" + step + " = 50;\n";
+};
+
+Arduino["esp32_stepper_driver_stop"] = function(block) {
+  var en = block.getFieldValue("EN");
+  if (en >= 0) {
+    return "digitalWrite(" + en + ", HIGH);\n";
+  }
+  return "// ENABLE no configurado\n";
+};
+
+// --- MOTORES PASO A PASO (4 CABLES DIRECTO) ---
+Arduino["esp32_stepper_4wire_begin"] = function(block) {
+  var in1 = block.getFieldValue("IN1");
+  var in2 = block.getFieldValue("IN2");
+  var in3 = block.getFieldValue("IN3");
+  var in4 = block.getFieldValue("IN4");
+  var spr = block.getFieldValue("SPR");
+  Arduino.definitions_["include_stepper"] = "#include <Stepper.h>";
+  Arduino.definitions_["var_stepper_4wire"] = "Stepper myStepper(" + spr + ", " + in1 + ", " + in3 + ", " + in2 + ", " + in4 + ");";
+  return "";
+};
+
+Arduino["esp32_stepper_4wire_move"] = function(block) {
+  var steps = Arduino.valueToCode(block, "STEPS", Arduino.ORDER_ATOMIC) || "0";
+  Arduino.definitions_["include_stepper"] = "#include <Stepper.h>";
+  Arduino.definitions_["var_stepper_4wire"] = Arduino.definitions_["var_stepper_4wire"] || "Stepper myStepper(2048, 16, 5, 17, 18);";
+  return "myStepper.step(" + steps + ");\n";
+};
+
+Arduino["esp32_stepper_4wire_speed"] = function(block) {
+  var rpm = Arduino.valueToCode(block, "RPM", Arduino.ORDER_ATOMIC) || "10";
+  Arduino.definitions_["include_stepper"] = "#include <Stepper.h>";
+  Arduino.definitions_["var_stepper_4wire"] = Arduino.definitions_["var_stepper_4wire"] || "Stepper myStepper(2048, 16, 5, 17, 18);";
+  return "myStepper.setSpeed(" + rpm + ");\n";
+};
+
+// --- SENSORES ---
+Arduino["esp32_button"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  Arduino.setups_["btn_" + pin] = "  pinMode(" + pin + ",INPUT_PULLUP);\n";
+  return ["(digitalRead(" + pin + ")==LOW)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_potentiometer"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ldr"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_dht_temp"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var type = block.getFieldValue("TYPE");
+  Arduino.definitions_["include_dht"] = "#include <DHT.h>";
+  Arduino.definitions_["var_dht_" + pin] = "DHT dht_" + pin + "(" + pin + "," + type + ");";
+  Arduino.setups_["dht_begin_" + pin] = "  dht_" + pin + ".begin();\n";
+  return ["dht_" + pin + ".readTemperature()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_dht_hum"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  var type = block.getFieldValue("TYPE");
+  Arduino.definitions_["include_dht"] = "#include <DHT.h>";
+  Arduino.definitions_["var_dht_" + pin] = "DHT dht_" + pin + "(" + pin + "," + type + ");";
+  Arduino.setups_["dht_begin_" + pin] = "  dht_" + pin + ".begin();\n";
+  return ["dht_" + pin + ".readHumidity()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ultrasonic_read"] = function(block) {
+  var trig = block.getFieldValue("TRIG");
+  var echo = block.getFieldValue("ECHO");
+  var funcName = "getDistance";
+  Arduino.definitions_["func_ultrasonic"] = "long " + funcName + "(int trigPin,int echoPin){\n" +
+    "  digitalWrite(trigPin,LOW);\n" +
+    "  delayMicroseconds(2);\n" +
+    "  digitalWrite(trigPin,HIGH);\n" +
+    "  delayMicroseconds(10);\n" +
+    "  digitalWrite(trigPin,LOW);\n" +
+    "  long duration = pulseIn(echoPin,HIGH);\n" +
+    "  return duration * 0.034 / 2;\n" +
+    "}";
+  return [funcName + "(" + trig + "," + echo + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_hall_read"] = function(block) {
+  return ["hallRead()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ky038_digital"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  Arduino.setups_["ky038_d_" + pin] = "  pinMode(" + pin + ", INPUT);\n";
+  return ["(digitalRead(" + pin + ") == HIGH)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ky038_analog"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_soil_moisture"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_rain_sensor"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_flame_sensor"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  Arduino.setups_["flame_" + pin] = "  pinMode(" + pin + ", INPUT);\n";
+  return ["(digitalRead(" + pin + ") == LOW)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ir_obstacle"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  Arduino.setups_["ir_obs_" + pin] = "  pinMode(" + pin + ", INPUT);\n";
+  return ["(digitalRead(" + pin + ") == LOW)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_tds_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  if (!Arduino.definitions_["func_tds_read"]) {
+    Arduino.definitions_["func_tds_read"] = 
+      "float readTDS(int pin){\n" +
+      "  int raw = analogRead(pin);\n" +
+      "  float voltage = raw * 3.3 / 4095.0;\n" +
+      "  float tds = (133.42 * voltage * voltage * voltage - 255.86 * voltage * voltage + 857.39 * voltage) * 0.5;\n" +
+      "  if (tds < 0) tds = 0;\n" +
+      "  return tds;\n" +
+      "}";
+  }
+  return ["readTDS(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+
+Arduino["esp32_bmp280_begin"] = function(block) {
+  var addr = block.getFieldValue("ADDR");
+  Arduino.definitions_["include_wire"] = "#include <Wire.h>";
+  Arduino.definitions_["include_bmp280"] = "#include <Adafruit_BMP280.h>";
+  Arduino.definitions_["var_bmp280"] = "Adafruit_BMP280 bmp;";
+  return "if (!bmp.begin(" + addr + ")) { Serial.println(\"BMP280 no encontrado!\"); }\n";
+};
+
+Arduino["esp32_bmp280_temp"] = function(block) {
+  Arduino.definitions_["include_bmp280"] = "#include <Adafruit_BMP280.h>";
+  Arduino.definitions_["var_bmp280"] = "Adafruit_BMP280 bmp;";
+  return ["bmp.readTemperature()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_bmp280_pres"] = function(block) {
+  Arduino.definitions_["include_bmp280"] = "#include <Adafruit_BMP280.h>";
+  Arduino.definitions_["var_bmp280"] = "Adafruit_BMP280 bmp;";
+  return ["(bmp.readPressure() / 100.0)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_bmp280_alt"] = function(block) {
+  Arduino.definitions_["include_bmp280"] = "#include <Adafruit_BMP280.h>";
+  Arduino.definitions_["var_bmp280"] = "Adafruit_BMP280 bmp;";
+  return ["bmp.readAltitude(1013.25)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_mq2_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_mq3_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_mq135_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  return ["analogRead(" + pin + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_pir_read"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  Arduino.setups_["pir_" + pin] = "  pinMode(" + pin + ", INPUT);\n";
+  return ["(digitalRead(" + pin + ") == HIGH)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ld2410_begin"] = function(block) {
+  var rx = block.getFieldValue("RX");
+  var tx = block.getFieldValue("TX");
+  Arduino.definitions_["include_ld2410"] = "#include <ld2410.h>";
+  Arduino.definitions_["var_ld2410"] = "ld2410 radar;";
+  return "Serial1.begin(256000, SERIAL_8N1, " + rx + ", " + tx + ");\n  radar.begin(Serial1);\n";
+};
+
+Arduino["esp32_ld2410_presence"] = function(block) {
+  Arduino.definitions_["include_ld2410"] = "#include <ld2410.h>";
+  Arduino.definitions_["var_ld2410"] = "ld2410 radar;";
+  return ["radar.presenceDetected()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ld2410_distance"] = function(block) {
+  Arduino.definitions_["include_ld2410"] = "#include <ld2410.h>";
+  Arduino.definitions_["var_ld2410"] = "ld2410 radar;";
+  return ["radar.detectedDistance()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_tcs3200_begin"] = function(block) {
+  var s2 = block.getFieldValue("S2");
+  var s3 = block.getFieldValue("S3");
+  var out = block.getFieldValue("OUT");
+  Arduino.setups_["tcs3200_s2_" + s2] = "  pinMode(" + s2 + ", OUTPUT);\n";
+  Arduino.setups_["tcs3200_s3_" + s3] = "  pinMode(" + s3 + ", OUTPUT);\n";
+  Arduino.setups_["tcs3200_out_" + out] = "  pinMode(" + out + ", INPUT);\n";
+  return "";
+};
+
+Arduino["esp32_tcs3200_read"] = function(block) {
+  var color = block.getFieldValue("COLOR");
+  var s2 = block.getFieldValue("S2");
+  var s3 = block.getFieldValue("S3");
+  var out = block.getFieldValue("OUT");
+  var s2_val = "LOW", s3_val = "LOW";
+  if (color === "RED") { s2_val = "LOW"; s3_val = "LOW"; }
+  else if (color === "BLUE") { s2_val = "LOW"; s3_val = "HIGH"; }
+  else if (color === "CLEAR") { s2_val = "HIGH"; s3_val = "LOW"; }
+  else if (color === "GREEN") { s2_val = "HIGH"; s3_val = "HIGH"; }
+  if (!Arduino.definitions_["func_tcs3200_read"]) {
+    Arduino.definitions_["func_tcs3200_read"] = 
+      "long readTCS3200(int s2, int s3, int out, int s2v, int s3v){\n" +
+      "  digitalWrite(s2, s2v);\n" +
+      "  digitalWrite(s3, s3v);\n" +
+      "  delayMicroseconds(10);\n" +
+      "  long duration = pulseIn(out, LOW, 100000);\n" +
+      "  return duration;\n" +
+      "}";
+  }
+  return ["readTCS3200(" + s2 + "," + s3 + "," + out + "," + s2_val + "," + s3_val + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_rfid_begin"] = function(block) {
+  var ss = block.getFieldValue("SS");
+  var rst = block.getFieldValue("RST");
+  Arduino.definitions_["include_spi"] = "#include <SPI.h>";
+  Arduino.definitions_["include_mfrc522"] = "#include <MFRC522.h>";
+  Arduino.definitions_["var_mfrc522"] = "MFRC522 mfrc522(" + ss + "," + rst + ");";
+  Arduino.setups_["mfrc522_begin"] = "  SPI.begin();\n  mfrc522.PCD_Init();\n";
+  return "";
+};
+
+Arduino["esp32_rfid_present"] = function(block) {
+  Arduino.definitions_["include_mfrc522"] = "#include <MFRC522.h>";
+  return ["(mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial())", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_rfid_read_uid"] = function(block) {
+  if (!Arduino.definitions_["func_rfid_uid"]) {
+    Arduino.definitions_["func_rfid_uid"] = 
+      "String readRFIDUid(){\n" +
+      "  String uid = \"\";\n" +
+      "  for (byte i=0; i<mfrc522.uid.size; i++){\n" +
+      "    if (mfrc522.uid.uidByte[i] < 0x10) uid += \"0\";\n" +
+      "    uid += String(mfrc522.uid.uidByte[i], HEX);\n" +
+      "  }\n" +
+      "  uid.toUpperCase();\n" +
+      "  return uid;\n" +
+      "}";
+  }
+  return ["readRFIDUid()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_inmp441_begin"] = function(block) {
+  var ws = block.getFieldValue("WS");
+  var sck = block.getFieldValue("SCK");
+  var sd = block.getFieldValue("SD");
+  var rate = block.getFieldValue("RATE");
+  Arduino.definitions_["include_i2s"] = "#include <driver/i2s.h>";
+  Arduino.definitions_["func_inmp441_read"] =
+    "int readINMP441Level(){\n" +
+    "  int32_t buf[64];\n" +
+    "  size_t bytesRead = 0;\n" +
+    "  i2s_read(I2S_NUM_0, &buf, sizeof(buf), &bytesRead, portMAX_DELAY);\n" +
+    "  int samples = bytesRead / sizeof(int32_t);\n" +
+    "  long sum = 0;\n" +
+    "  for (int i=0;i<samples;i++){\n" +
+    "    int32_t s = buf[i] >> 11;\n" +
+    "    if (s < 0) s = -s;\n" +
+    "    sum += s;\n" +
+    "  }\n" +
+    "  return samples>0 ? (sum/samples) : 0;\n" +
+    "}";
+  return "{\n" +
+    "  i2s_config_t i2s_cfg = {\n" +
+    "    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),\n" +
+    "    .sample_rate = " + rate + ",\n" +
+    "    .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,\n" +
+    "    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,\n" +
+    "    .communication_format = I2S_COMM_FORMAT_STAND_I2S,\n" +
+    "    .intr_alloc_flags = 0,\n" +
+    "    .dma_buf_count = 4,\n" +
+    "    .dma_buf_len = 256\n" +
+    "  };\n" +
+    "  i2s_pin_config_t i2s_pins = {\n" +
+    "    .bck_io_num = " + sck + ",\n" +
+    "    .ws_io_num = " + ws + ",\n" +
+    "    .data_out_num = I2S_PIN_NO_CHANGE,\n" +
+    "    .data_in_num = " + sd + "\n" +
+    "  };\n" +
+    "  i2s_driver_install(I2S_NUM_0, &i2s_cfg, 0, NULL);\n" +
+    "  i2s_set_pin(I2S_NUM_0, &i2s_pins);\n" +
+    "}\n";
+};
+
+Arduino["esp32_inmp441_read_level"] = function(block) {
+  Arduino.definitions_["include_i2s"] = "#include <driver/i2s.h>";
+  return ["readINMP441Level()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ds18b20_begin"] = function(block) {
+  var pin = block.getFieldValue("PIN");
+  Arduino.definitions_["include_onewire"] = "#include <OneWire.h>";
+  Arduino.definitions_["include_ds18b20"] = "#include <DallasTemperature.h>";
+  Arduino.definitions_["var_onewire"] = "OneWire oneWire(" + pin + ");";
+  Arduino.definitions_["var_ds18b20"] = "DallasTemperature ds18b20(&oneWire);";
+  return "ds18b20.begin();\n";
+};
+
+Arduino["esp32_ds18b20_read"] = function(block) {
+  Arduino.definitions_["include_onewire"] = "#include <OneWire.h>";
+  Arduino.definitions_["include_ds18b20"] = "#include <DallasTemperature.h>";
+  if (!Arduino.definitions_["func_ds18b20_read"]) {
+    Arduino.definitions_["func_ds18b20_read"] =
+      "float readDS18B20(){\n" +
+      "  ds18b20.requestTemperatures();\n" +
+      "  return ds18b20.getTempCByIndex(0);\n" +
+      "}";
+  }
+  return ["readDS18B20()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_mpu6050_begin"] = function(block) {
+  Arduino.definitions_["include_wire2"] = "#include <Wire.h>";
+  Arduino.definitions_["include_sensor"] = "#include <Adafruit_Sensor.h>";
+  Arduino.definitions_["include_mpu6050"] = "#include <Adafruit_MPU6050.h>";
+  Arduino.definitions_["var_mpu6050"] = "Adafruit_MPU6050 mpu;";
+  return "if (!mpu.begin()) { Serial.println(\"MPU6050 no encontrado!\"); }\n";
+};
+
+Arduino["esp32_mpu6050_accel"] = function(block) {
+  var axis = block.getFieldValue("AXIS");
+  Arduino.definitions_["include_sensor"] = "#include <Adafruit_Sensor.h>";
+  Arduino.definitions_["include_mpu6050"] = "#include <Adafruit_MPU6050.h>";
+  Arduino.definitions_["var_mpu6050"] = "Adafruit_MPU6050 mpu;";
+  if (!Arduino.definitions_["func_mpu6050_accel"]) {
+    Arduino.definitions_["func_mpu6050_accel"] =
+      "float readMPU6050Accel(char axis){\n" +
+      "  sensors_event_t a, g, temp;\n" +
+      "  mpu.getEvent(&a, &g, &temp);\n" +
+      "  if (axis=='X') return a.acceleration.x;\n" +
+      "  if (axis=='Y') return a.acceleration.y;\n" +
+      "  return a.acceleration.z;\n" +
+      "}";
+  }
+  return ["readMPU6050Accel('" + axis + "')", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_mpu6050_gyro"] = function(block) {
+  var axis = block.getFieldValue("AXIS");
+  Arduino.definitions_["include_sensor"] = "#include <Adafruit_Sensor.h>";
+  Arduino.definitions_["include_mpu6050"] = "#include <Adafruit_MPU6050.h>";
+  Arduino.definitions_["var_mpu6050"] = "Adafruit_MPU6050 mpu;";
+  if (!Arduino.definitions_["func_mpu6050_gyro"]) {
+    Arduino.definitions_["func_mpu6050_gyro"] =
+      "float readMPU6050Gyro(char axis){\n" +
+      "  sensors_event_t a, g, temp;\n" +
+      "  mpu.getEvent(&a, &g, &temp);\n" +
+      "  if (axis=='X') return g.gyro.x;\n" +
+      "  if (axis=='Y') return g.gyro.y;\n" +
+      "  return g.gyro.z;\n" +
+      "}";
+  }
+  return ["readMPU6050Gyro('" + axis + "')", Arduino.ORDER_ATOMIC];
+};
+
+// --- WIFI ---
+Arduino["esp32_wifi_begin"] = function(block) {
+  var ssid = Arduino.valueToCode(block, "SSID", Arduino.ORDER_ATOMIC) || '""';
+  var pass = Arduino.valueToCode(block, "PASS", Arduino.ORDER_ATOMIC) || '""';
+  Arduino.definitions_["include_wifi"] = "#include <WiFi.h>";
+  return "WiFi.begin(" + ssid + "," + pass + ");\n" +
+    "  {\n" +
+    "    unsigned long wifiT0 = millis();\n" +
+    "    while (WiFi.status() != WL_CONNECTED && millis() - wifiT0 < 15000) { delay(500); }\n" +
+    "    if (WiFi.status() != WL_CONNECTED) { Serial.println(\"WiFi: no se pudo conectar, continuo sin red.\"); }\n" +
+    "  }\n";
+};
+
+Arduino["esp32_wifi_ap"] = function(block) {
+  var ssid = Arduino.valueToCode(block, "SSID", Arduino.ORDER_ATOMIC) || '"ESP32_AP"';
+  var pass = Arduino.valueToCode(block, "PASS", Arduino.ORDER_ATOMIC) || '"12345678"';
+  Arduino.definitions_["include_wifi"] = "#include <WiFi.h>";
+  return "WiFi.softAP(" + ssid + "," + pass + ");\n";
+};
+
+Arduino["esp32_wifi_connected"] = function(block) {
+  Arduino.definitions_["include_wifi"] = "#include <WiFi.h>";
+  return ["(WiFi.status()==WL_CONNECTED)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_wifi_localip"] = function(block) {
+  Arduino.definitions_["include_wifi"] = "#include <WiFi.h>";
+  return ["WiFi.localIP().toString()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_wifi_scan"] = function(block) {
+  Arduino.definitions_["include_wifi"] = "#include <WiFi.h>";
+  return ["WiFi.scanNetworks()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_web_server_begin"] = function(block) {
+  var port = Arduino.valueToCode(block, "PORT", Arduino.ORDER_ATOMIC) || "80";
+  Arduino.definitions_["include_webserver"] = "#include <WebServer.h>";
+  Arduino.definitions_["var_webserver"] = "WebServer server(" + port + ");";
+  return "server.begin();\n";
+};
+
+Arduino["esp32_web_server_on"] = function(block) {
+  var path = Arduino.valueToCode(block, "PATH", Arduino.ORDER_ATOMIC) || '"/"';
+  var branch = Arduino.statementToCode(block, "DO");
+  Arduino.definitions_["include_webserver"] = "#include <WebServer.h>";
+  return "server.on(" + path + ", [](){\n" + branch + "});\n";
+};
+
+Arduino["esp32_web_server_handle"] = function(block) {
+  return "server.handleClient();\n";
+};
+
+Arduino["esp32_web_send"] = function(block) {
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_ATOMIC) || '"OK"';
+  return "server.send(200, \"text/html\", " + text + ");\n";
+};
+
+Arduino["esp32_http_get"] = function(block) {
+  var url = Arduino.valueToCode(block, "URL", Arduino.ORDER_ATOMIC) || '""';
+  Arduino.definitions_["include_http"] = "#include <HTTPClient.h>";
+  Arduino.definitions_["func_http_get"] = "int httpGet(String url){\n" +
+    "  HTTPClient http;\n" +
+    "  http.begin(url);\n" +
+    "  int code = http.GET();\n" +
+    "  http.end();\n" +
+    "  return code;\n" +
+    "}";
+  return ["httpGet(" + url + ")", Arduino.ORDER_ATOMIC];
+};
+
+// --- BLE ---
+Arduino["esp32_ble_begin"] = function(block) {
+  var name = block.getFieldValue("NAME");
+  Arduino.definitions_["include_ble"] = "#include <BLEDevice.h>\n#include <BLEServer.h>\n#include <BLECharacteristic.h>\n#include <BLE2902.h>";
+  Arduino.definitions_["var_ble"] = "BLECharacteristic *pTxCharacteristic;\nBLECharacteristic *pRxCharacteristic;\nString bleValue = \"\";\nbool bleConnected = false;";
+  Arduino.definitions_["func_ble_cb"] = "class MyCallbacks: public BLECharacteristicCallbacks {\n" +
+    "  void onWrite(BLECharacteristic *pCharacteristic){\n" +
+    "    bleValue = pCharacteristic->getValue().c_str();\n" +
+    "    bleValue.trim();\n" +
+    "  }\n" +
+    "};\n" +
+    "class MyServerCallbacks: public BLEServerCallbacks {\n" +
+    "  void onConnect(BLEServer* pServer){ bleConnected = true; }\n" +
+    "  void onDisconnect(BLEServer* pServer){\n" +
+    "    bleConnected = false;\n" +
+    "    BLEDevice::startAdvertising();\n" +
+    "  }\n" +
+    "};";
+  var setupCode = "BLEDevice::init(\"" + name + "\");\n" +
+    "  BLEServer *pServer = BLEDevice::createServer();\n" +
+    "  pServer->setCallbacks(new MyServerCallbacks());\n" +
+    "  BLEService *pService = pServer->createService(\"6E400001-B5A3-F393-E0A9-E50E24DCCA9E\");\n" +
+    "  pTxCharacteristic = pService->createCharacteristic(\"6E400003-B5A3-F393-E0A9-E50E24DCCA9E\", BLECharacteristic::PROPERTY_NOTIFY);\n" +
+    "  pTxCharacteristic->addDescriptor(new BLE2902());\n" +
+    "  pRxCharacteristic = pService->createCharacteristic(\"6E400002-B5A3-F393-E0A9-E50E24DCCA9E\", BLECharacteristic::PROPERTY_WRITE);\n" +
+    "  pRxCharacteristic->setCallbacks(new MyCallbacks());\n" +
+    "  pService->start();\n" +
+    "  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();\n" +
+    "  pAdvertising->addServiceUUID(\"6E400001-B5A3-F393-E0A9-E50E24DCCA9E\");\n" +
+    "  pAdvertising->setScanResponse(true);\n" +
+    "  pAdvertising->setMinPreferred(0x06);\n" +
+    "  pAdvertising->setMinPreferred(0x12);\n" +
+    "  BLEDevice::startAdvertising();\n";
+  return setupCode;
+};
+
+Arduino["esp32_ble_set_value"] = function(block) {
+  var val = Arduino.valueToCode(block, "VAL", Arduino.ORDER_ATOMIC) || '"0"';
+  return "pTxCharacteristic->setValue(String(" + val + ").c_str());\n";
+};
+
+Arduino["esp32_ble_get_value"] = function(block) {
+  return ["bleValue", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_ble_notify"] = function(block) {
+  return "pTxCharacteristic->notify();\n";
+};
+
+Arduino["esp32_ble_connected"] = function(block) {
+  return ["bleConnected", Arduino.ORDER_ATOMIC];
+};
+
+// --- ESP32 NOW ---
+
+// Helper para convertir MAC string a array de bytes C++
+function espNowMacToArray(macStr) {
+  var parts = macStr.split(':');
+  if (parts.length !== 6) return null;
+  var bytes = [];
+  for (var i = 0; i < 6; i++) {
+    bytes.push("0x" + parts[i].toUpperCase());
+  }
+  return "{ " + bytes.join(", ") + " }";
+}
+
+function espNowMacVarName(macStr) {
+  return "macAddr_" + macStr.replace(/:/g, "_");
+}
+
+Arduino["esp32_now_begin"] = function(block) {
+  Arduino.definitions_["include_espnow"] = "#include <esp_now.h>";
+  Arduino.definitions_["include_wifi"] = "#include <WiFi.h>";
+  Arduino.definitions_["struct_espnow"] = "typedef struct { char text[32]; float number; } esp_now_msg_t;";
+  Arduino.definitions_["var_espnow_incoming"] = "esp_now_msg_t espNowIncoming;";
+  Arduino.definitions_["var_espnow_outgoing"] = "esp_now_msg_t espNowOutgoing;";
+  Arduino.definitions_["var_espnow_flag"] = "volatile bool espNowDataReceived = false;";
+  Arduino.definitions_["var_espnow_peerinfo"] = "esp_now_peer_info_t espNowPeerInfo;";
+  Arduino.definitions_["func_espnow_recv"] = 
+    "void OnEspNowRecv(const uint8_t *mac, const uint8_t *data, int len) {\n" +
+    "  memcpy(&espNowIncoming, data, min(len, sizeof(espNowIncoming)));\n" +
+    "  espNowDataReceived = true;\n" +
+    "}\n";
+  Arduino.definitions_["func_espnow_sent"] = 
+    "void OnEspNowSent(const uint8_t *mac_addr, esp_now_send_status_t status) {\n" +
+    "  // Envio completado\n" +
+    "}\n";
+  return "WiFi.mode(WIFI_STA);\n" +
+         "if (esp_now_init() != ESP_OK) {\n" +
+         "  Serial.println(\"Error inicializando ESP-NOW\");\n" +
+         "} else {\n" +
+         "  esp_now_register_recv_cb(OnEspNowRecv);\n" +
+         "  esp_now_register_send_cb(OnEspNowSent);\n" +
+         "}\n";
+};
+
+Arduino["esp32_now_add_peer"] = function(block) {
+  var macStr = block.getFieldValue("MAC");
+  var macArray = espNowMacToArray(macStr);
+  var macVar = espNowMacVarName(macStr);
+  if (macArray && !Arduino.definitions_["mac_def_" + macStr]) {
+    Arduino.definitions_["mac_def_" + macStr] = "uint8_t " + macVar + "[] = " + macArray + ";";
+  }
+  var code = "memcpy(espNowPeerInfo.peer_addr, " + macVar + ", 6);\n";
+  code += "espNowPeerInfo.channel = 0;\n";
+  code += "espNowPeerInfo.encrypt = false;\n";
+  code += "if (esp_now_add_peer(&espNowPeerInfo) != ESP_OK) {\n";
+  code += "  Serial.println(\"Error añadiendo peer\");\n";
+  code += "}\n";
+  return code;
+};
+
+Arduino["esp32_now_get_mac"] = function(block) {
+  Arduino.definitions_["include_wifi"] = "#include <WiFi.h>";
+  if (!Arduino.definitions_["func_get_mac"]) {
+    Arduino.definitions_["func_get_mac"] = 
+      "String getEspMacAddress() {\n" +
+      "  uint8_t baseMac[6];\n" +
+      "  esp_read_mac(baseMac, ESP_MAC_WIFI_STA);\n" +
+      "  char macStr[18] = {0};\n" +
+      "  sprintf(macStr, \"%02X:%02X:%02X:%02X:%02X:%02X\", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);\n" +
+      "  return String(macStr);\n" +
+      "}\n";
+  }
+  return ["getEspMacAddress()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_now_send_text"] = function(block) {
+  var macStr = block.getFieldValue("MAC");
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_ATOMIC) || '\"\"';
+  var macVar = espNowMacVarName(macStr);
+  var macArray = espNowMacToArray(macStr);
+  if (macArray && !Arduino.definitions_["mac_def_" + macStr]) {
+    Arduino.definitions_["mac_def_" + macStr] = "uint8_t " + macVar + "[] = " + macArray + ";";
+  }
+  var code = "strncpy(espNowOutgoing.text, String(" + text + ").c_str(), 31);\n";
+  code += "espNowOutgoing.text[31] = '\\0';\n";
+  code += "espNowOutgoing.number = 0;\n";
+  code += "esp_now_send(" + macVar + ", (uint8_t *)&espNowOutgoing, sizeof(espNowOutgoing));\n";
+  return code;
+};
+
+Arduino["esp32_now_send_number"] = function(block) {
+  var macStr = block.getFieldValue("MAC");
+  var num = Arduino.valueToCode(block, "NUM", Arduino.ORDER_ATOMIC) || "0";
+  var macVar = espNowMacVarName(macStr);
+  var macArray = espNowMacToArray(macStr);
+  if (macArray && !Arduino.definitions_["mac_def_" + macStr]) {
+    Arduino.definitions_["mac_def_" + macStr] = "uint8_t " + macVar + "[] = " + macArray + ";";
+  }
+  var code = "espNowOutgoing.number = " + num + ";\n";
+  code += "strcpy(espNowOutgoing.text, \"\");\n";
+  code += "esp_now_send(" + macVar + ", (uint8_t *)&espNowOutgoing, sizeof(espNowOutgoing));\n";
+  return code;
+};
+
+Arduino["esp32_now_on_receive"] = function(block) {
+  var branch = Arduino.statementToCode(block, "DO");
+  return "if (espNowDataReceived) {\n  espNowDataReceived = false;\n" + branch + "}\n";
+};
+
+Arduino["esp32_now_received_text"] = function(block) {
+  return ["String(espNowIncoming.text)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_now_received_number"] = function(block) {
+  return ["espNowIncoming.number", Arduino.ORDER_ATOMIC];
+};
+
+// --- PANTALLAS ---
+Arduino["esp32_lcd_begin"] = function(block) {
+  var dir = block.getFieldValue("DIR");
+  Arduino.definitions_["include_wire"] = "#include <Wire.h>";
+  Arduino.definitions_["include_lcd"] = "#include <LiquidCrystal_I2C.h>";
+  Arduino.definitions_["var_lcd"] = "LiquidCrystal_I2C lcd(" + dir + ", 16, 2);";
+  return "lcd.init();\n  lcd.backlight();\n";
+};
+
+Arduino["esp32_lcd_clear"] = function(block) {
+  return "lcd.clear();\n";
+};
+
+Arduino["esp32_lcd_print"] = function(block) {
+  var col = block.getFieldValue("COL");
+  var row = block.getFieldValue("ROW");
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_ATOMIC) || '""';
+  return "lcd.setCursor(" + col + "," + row + ");\n  lcd.print(" + text + ");\n";
+};
+
+Arduino["esp32_oled_begin"] = function(block) {
+  var dir = block.getFieldValue("DIR");
+  Arduino.definitions_["include_wire"] = "#include <Wire.h>";
+  Arduino.definitions_["include_gfx"] = "#include <Adafruit_GFX.h>";
+  Arduino.definitions_["include_oled"] = "#include <Adafruit_SSD1306.h>";
+  Arduino.definitions_["var_oled"] = "Adafruit_SSD1306 oled(128, 64, &Wire, -1);";
+  return "oled.begin(SSD1306_SWITCHCAPVCC, " + dir + ");\n  oled.clearDisplay();\n  oled.setTextSize(1);\n  oled.setTextColor(SSD1306_WHITE);\n  oled.display();\n";
+};
+
+Arduino["esp32_oled_clear"] = function(block) {
+  return "oled.clearDisplay();\n  oled.display();\n";
+};
+
+Arduino["esp32_oled_print"] = function(block) {
+  var line = block.getFieldValue("LINE");
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_ATOMIC) || '""';
+  return "oled.setCursor(0," + (line * 8) + ");\n  oled.print(" + text + ");\n  oled.display();\n";
+};
+
+// --- UTILIDADES ---
+Arduino["esp32_map"] = function(block) {
+  var val = Arduino.valueToCode(block, "VAL", Arduino.ORDER_NONE) || "0";
+  var fl = Arduino.valueToCode(block, "FROM_LOW", Arduino.ORDER_NONE) || "0";
+  var fh = Arduino.valueToCode(block, "FROM_HIGH", Arduino.ORDER_NONE) || "1023";
+  var tl = Arduino.valueToCode(block, "TO_LOW", Arduino.ORDER_NONE) || "0";
+  var th = Arduino.valueToCode(block, "TO_HIGH", Arduino.ORDER_NONE) || "255";
+  return ["map(" + val + "," + fl + "," + fh + "," + tl + "," + th + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_millis"] = function(block) {
+  return ["millis()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_random"] = function(block) {
+  var minv = Arduino.valueToCode(block, "MIN", Arduino.ORDER_NONE) || "0";
+  var maxv = Arduino.valueToCode(block, "MAX", Arduino.ORDER_NONE) || "100";
+  return ["random(" + minv + "," + maxv + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["esp32_random_seed"] = function(block) {
+  return "randomSeed(analogRead(34));\n";
+};
+
+// --- NATIVOS ---
+Arduino["math_number"] = function(block) {
+  return [String(Number(block.getFieldValue("NUM"))), Arduino.ORDER_ATOMIC];
+};
+
+Arduino["math_arithmetic"] = function(block) {
+  var OPS = {
+    "ADD": ["+", 4], "MINUS": ["-", 4],
+    "MULTIPLY": ["*", 3], "DIVIDE": ["/", 3], "POWER": ["^", 99]
+  };
+  var t = OPS[block.getFieldValue("OP")];
+  var a = Arduino.valueToCode(block, "A", t[1]) || "0";
+  var b = Arduino.valueToCode(block, "B", t[1]) || "0";
+  return [a + " " + t[0] + " " + b, t[1]];
+};
+
+Arduino["math_random_int"] = function(block) {
+  var a = Arduino.valueToCode(block, "FROM", Arduino.ORDER_NONE) || "0";
+  var b = Arduino.valueToCode(block, "TO", Arduino.ORDER_NONE) || "0";
+  return ["random(" + a + "," + b + "+1)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino.quote_ = function(string) {
+  string = string.replace(/\\/g, "\\\\");
+  string = string.replace(/"/g, '\\"');
+  string = string.replace(/\n/g, "\\n");
+  return '"' + string + '"';
+};
+
+Arduino["text"] = function(block) {
+  return [Arduino.quote_(block.getFieldValue("TEXT")), Arduino.ORDER_ATOMIC];
+};
+
+Arduino["text_join"] = function(block) {
+  var n = 0;
+  var parts = [];
+  while (block.getInput("ADD" + n)) {
+    var part = Arduino.valueToCode(block, "ADD" + n, Arduino.ORDER_NONE);
+    if (part) parts.push("String(" + part + ")");
+    n++;
+  }
+  if (parts.length === 0) return ['""', Arduino.ORDER_ATOMIC];
+  return [parts.join(" + "), Arduino.ORDER_ATOMIC];
+};
+
+Arduino["logic_compare"] = function(block) {
+  var OPS = {"EQ":"==","NEQ":"!=","LT":"<","LTE":"<=","GT":">","GTE":">="};
+  var op = OPS[block.getFieldValue("OP")];
+  var a = Arduino.valueToCode(block, "A", 6) || "0";
+  var b = Arduino.valueToCode(block, "B", 6) || "0";
+  return [a + " " + op + " " + b, 6];
+};
+
+Arduino["logic_operation"] = function(block) {
+  var op = (block.getFieldValue("OP") == "AND") ? "&&" : "||";
+  var order = (op == "&&") ? 11 : 12;
+  var a = Arduino.valueToCode(block, "A", order) || "false";
+  var b = Arduino.valueToCode(block, "B", order) || "false";
+  return [a + " " + op + " " + b, order];
+};
+
+Arduino["logic_negate"] = function(block) {
+  var a = Arduino.valueToCode(block, "BOOL", 2) || "false";
+  return ["!" + a, 2];
+};
+
+Arduino["logic_boolean"] = function(block) {
+  return [(block.getFieldValue("BOOL") == "TRUE") ? "true" : "false", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["controls_if"] = function(block) {
+  var n = 0, code = "", branchCode, condCode;
+  do {
+    condCode = Arduino.valueToCode(block, "IF" + n, Arduino.ORDER_NONE) || "false";
+    branchCode = Arduino.statementToCode(block, "DO" + n);
+    code += (n == 0 ? "" : "else ") + "if (" + condCode + "){\n" + branchCode + "}";
+    n++;
+  } while (block.getInput("IF" + n));
+  if (block.getInput("ELSE")) {
+    branchCode = Arduino.statementToCode(block, "ELSE");
+    code += "else {\n" + branchCode + "}";
+  }
+  return code + "\n";
+};
+
+Arduino["controls_ifelse"] = Arduino["controls_if"];
+
+Arduino["controls_repeat_ext"] = function(block) {
+  var repeats = Arduino.valueToCode(block, "TIMES", 4) || "0";
+  var branch = Arduino.statementToCode(block, "DO");
+  return "for (int i=0;i<" + repeats + ";i++){\n" + branch + "}\n";
+};
+
+Arduino["controls_whileUntil"] = function(block) {
+  var until = block.getFieldValue("MODE") == "UNTIL";
+  var arg = Arduino.valueToCode(block, "BOOL", Arduino.ORDER_NONE) || "false";
+  if (until) arg = "!" + arg;
+  var branch = Arduino.statementToCode(block, "DO");
+  return "while (" + arg + "){\n" + branch + "}\n";
+};
+
+Arduino["controls_for"] = function(block) {
+  var v = Arduino.nameDB_.getName(block.getFieldValue("VAR"), "VARIABLE");
+  var from = Arduino.valueToCode(block, "FROM", 14) || "0";
+  var to = Arduino.valueToCode(block, "TO", 14) || "0";
+  var branch = Arduino.statementToCode(block, "DO");
+  return "for (int " + v + "=" + from + ";" + v + "<=" + to + ";" + v + "++){\n" + branch + "}\n";
+};
+
+
+
+
+
+
+// --- FUNCIONES / PROCEDURES ---
+Arduino["procedures_defnoreturn"] = function(block) {
+  var funcName = Arduino.nameDB_.getName(block.getFieldValue("NAME"), "PROCEDURE");
+  var branch = Arduino.statementToCode(block, "STACK");
+  var args = [];
+  for (var i = 0; i < block.arguments_.length; i++) {
+    args[i] = "float " + Arduino.nameDB_.getName(block.arguments_[i], "VARIABLE");
+  }
+  var code = "void " + funcName + "(" + args.join(", ") + ") {\n" + branch + "}\n";
+  code = Arduino.scrub_(block, code);
+  Arduino.definitions_["%" + funcName] = code;
+  return null;
+};
+
+Arduino["procedures_defreturn"] = function(block) {
+  var funcName = Arduino.nameDB_.getName(block.getFieldValue("NAME"), "PROCEDURE");
+  var branch = Arduino.statementToCode(block, "STACK");
+  var returnValue = Arduino.valueToCode(block, "RETURN", Arduino.ORDER_NONE) || "";
+  var args = [];
+  for (var i = 0; i < block.arguments_.length; i++) {
+    args[i] = "float " + Arduino.nameDB_.getName(block.arguments_[i], "VARIABLE");
+  }
+  var code = "float " + funcName + "(" + args.join(", ") + ") {\n" + branch;
+  if (returnValue) {
+    code += "  return " + returnValue + ";\n";
+  }
+  code += "}\n";
+  code = Arduino.scrub_(block, code);
+  Arduino.definitions_["%" + funcName] = code;
+  return null;
+};
+
+Arduino["procedures_callnoreturn"] = function(block) {
+  var funcName = Arduino.nameDB_.getName(block.getFieldValue("NAME"), "PROCEDURE");
+  var args = [];
+  for (var i = 0; i < block.arguments_.length; i++) {
+    args[i] = Arduino.valueToCode(block, "ARG" + i, Arduino.ORDER_NONE) || "0";
+  }
+  var code = funcName + "(" + args.join(", ") + ");\n";
+  return code;
+};
+
+Arduino["procedures_callreturn"] = function(block) {
+  var funcName = Arduino.nameDB_.getName(block.getFieldValue("NAME"), "PROCEDURE");
+  var args = [];
+  for (var i = 0; i < block.arguments_.length; i++) {
+    args[i] = Arduino.valueToCode(block, "ARG" + i, Arduino.ORDER_NONE) || "0";
+  }
+  var code = funcName + "(" + args.join(", ") + ")";
+  return [code, Arduino.ORDER_ATOMIC];
+};
+
+Arduino["procedures_ifreturn"] = function(block) {
+  var condition = Arduino.valueToCode(block, "CONDITION", Arduino.ORDER_NONE) || "false";
+  var code = "if (" + condition + ") {\n";
+  if (block.hasReturnValue_) {
+    var value = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_NONE) || "0";
+    code += "  return " + value + ";\n";
+  } else {
+    code += "  return;\n";
+  }
+  code += "}\n";
+  return code;
+};
+
+
+// --- MATEMATICAS ADICIONALES ---
+Arduino["math_single"] = function(block) {
+  var operator = block.getFieldValue("OP");
+  var arg = Arduino.valueToCode(block, "NUM", Arduino.ORDER_NONE) || "0";
+  var code, order;
+  switch (operator) {
+    case "ABS": code = "abs(" + arg + ")"; order = Arduino.ORDER_ATOMIC; break;
+    case "NEG": code = "-" + arg; order = Arduino.ORDER_UNARY_NEGATION; break;
+    case "SQRT": code = "sqrt(" + arg + ")"; order = Arduino.ORDER_ATOMIC; break;
+    case "LN": code = "log(" + arg + ")"; order = Arduino.ORDER_ATOMIC; break;
+    case "LOG10": code = "log10(" + arg + ")"; order = Arduino.ORDER_ATOMIC; break;
+    case "EXP": code = "exp(" + arg + ")"; order = Arduino.ORDER_ATOMIC; break;
+    case "POW10": code = "pow(10, " + arg + ")"; order = Arduino.ORDER_ATOMIC; break;
+    case "ROOT": code = "sqrt(" + arg + ")"; order = Arduino.ORDER_ATOMIC; break;
+    default: code = arg; order = Arduino.ORDER_ATOMIC;
+  }
+  return [code, order];
+};
+
+Arduino["math_trig"] = function(block) {
+  var operator = block.getFieldValue("OP");
+  var arg = Arduino.valueToCode(block, "NUM", Arduino.ORDER_NONE) || "0";
+  var code;
+  switch (operator) {
+    case "SIN": code = "sin(" + arg + " * PI / 180.0)"; break;
+    case "COS": code = "cos(" + arg + " * PI / 180.0)"; break;
+    case "TAN": code = "tan(" + arg + " * PI / 180.0)"; break;
+    case "ASIN": code = "asin(" + arg + ") * 180.0 / PI"; break;
+    case "ACOS": code = "acos(" + arg + ") * 180.0 / PI"; break;
+    case "ATAN": code = "atan(" + arg + ") * 180.0 / PI"; break;
+    default: code = arg;
+  }
+  return [code, Arduino.ORDER_ATOMIC];
+};
+
+Arduino["math_constant"] = function(block) {
+  var constant = block.getFieldValue("CONSTANT");
+  var code;
+  switch (constant) {
+    case "PI": code = "PI"; break;
+    case "E": code = "exp(1)"; break;
+    case "GOLDEN_RATIO": code = "1.61803398875"; break;
+    case "SQRT2": code = "sqrt(2)"; break;
+    case "SQRT1_2": code = "sqrt(0.5)"; break;
+    case "INFINITY": code = "INFINITY"; break;
+    default: code = "0";
+  }
+  return [code, Arduino.ORDER_ATOMIC];
+};
+
+Arduino["math_number_property"] = function(block) {
+  var number = Arduino.valueToCode(block, "NUMBER_TO_CHECK", Arduino.ORDER_NONE) || "0";
+  var property = block.getFieldValue("PROPERTY");
+  var code;
+  switch (property) {
+    case "EVEN": code = "(" + number + " % 2 == 0)"; break;
+    case "ODD": code = "(" + number + " % 2 != 0)"; break;
+    case "WHOLE": code = "(floor(" + number + ") == " + number + ")"; break;
+    case "POSITIVE": code = "(" + number + " > 0)"; break;
+    case "NEGATIVE": code = "(" + number + " < 0)"; break;
+    case "DIVISIBLE_BY":
+      var divisor = Arduino.valueToCode(block, "DIVISOR", Arduino.ORDER_NONE) || "1";
+      code = "(" + number + " % " + divisor + " == 0)";
+      break;
+    case "PRIME":
+      code = "isPrime(" + number + ")";
+      Arduino.definitions_["func_isPrime"] = 
+        "bool isPrime(int n){\n" +
+        "  if (n <= 1) return false;\n" +
+        "  if (n <= 3) return true;\n" +
+        "  if (n % 2 == 0 || n % 3 == 0) return false;\n" +
+        "  for (int i=5; i*i<=n; i+=6){\n" +
+        "    if (n % i == 0 || n % (i+2) == 0) return false;\n" +
+        "  }\n" +
+        "  return true;\n" +
+        "}";
+      break;
+    default: code = "false";
+  }
+  return [code, Arduino.ORDER_ATOMIC];
+};
+
+Arduino["math_round"] = function(block) {
+  var operator = block.getFieldValue("OP");
+  var arg = Arduino.valueToCode(block, "NUM", Arduino.ORDER_NONE) || "0";
+  var code;
+  switch (operator) {
+    case "ROUND": code = "round(" + arg + ")"; break;
+    case "ROUNDUP": code = "ceil(" + arg + ")"; break;
+    case "ROUNDDOWN": code = "floor(" + arg + ")"; break;
+    default: code = arg;
+  }
+  return [code, Arduino.ORDER_ATOMIC];
+};
+
+Arduino["math_modulo"] = function(block) {
+  var dividend = Arduino.valueToCode(block, "DIVIDEND", Arduino.ORDER_NONE) || "0";
+  var divisor = Arduino.valueToCode(block, "DIVISOR", Arduino.ORDER_NONE) || "1";
+  return [dividend + " % " + divisor, Arduino.ORDER_ATOMIC];
+};
+
+Arduino["math_constrain"] = function(block) {
+  var value = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_NONE) || "0";
+  var low = Arduino.valueToCode(block, "LOW", Arduino.ORDER_NONE) || "0";
+  var high = Arduino.valueToCode(block, "HIGH", Arduino.ORDER_NONE) || "0";
+  return ["constrain(" + value + ", " + low + ", " + high + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["math_random_float"] = function(block) {
+  return ["(float)random(0, 1000000) / 1000000.0", Arduino.ORDER_ATOMIC];
+};
+
+// --- TEXTO ADICIONALES ---
+Arduino["text_length"] = function(block) {
+  var text = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_NONE) || '""';
+  return ["String(" + text + ").length()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["text_isEmpty"] = function(block) {
+  var text = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_NONE) || '""';
+  return ["(String(" + text + ").length() == 0)", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["text_indexOf"] = function(block) {
+  var substring = Arduino.valueToCode(block, "FIND", Arduino.ORDER_NONE) || '""';
+  var text = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_NONE) || '""';
+  var op = block.getFieldValue("END") === "FIRST" ? "indexOf" : "lastIndexOf";
+  return ["String(" + text + ")." + op + "(String(" + substring + "))", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["text_charAt"] = function(block) {
+  var at = Arduino.valueToCode(block, "AT", Arduino.ORDER_NONE) || "0";
+  var text = Arduino.valueToCode(block, "VALUE", Arduino.ORDER_NONE) || '""';
+  return ["String(" + text + ").charAt(" + at + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["text_getSubstring"] = function(block) {
+  var text = Arduino.valueToCode(block, "STRING", Arduino.ORDER_NONE) || '""';
+  var at1 = Arduino.valueToCode(block, "AT1", Arduino.ORDER_NONE) || "0";
+  var at2 = Arduino.valueToCode(block, "AT2", Arduino.ORDER_NONE) || "0";
+  var where1 = block.getFieldValue("WHERE1");
+  var where2 = block.getFieldValue("WHERE2");
+
+  var start, end;
+  if (where1 === "FROM_START") start = at1;
+  else if (where1 === "FROM_END") start = "String(" + text + ").length() - 1 - " + at1;
+  else start = "0";
+
+  if (where2 === "FROM_START") end = at2;
+  else if (where2 === "FROM_END") end = "String(" + text + ").length() - 1 - " + at2;
+  else end = "String(" + text + ").length() - 1";
+
+  var len = "(" + end + " - " + start + " + 1)";
+  return ["String(" + text + ").substring(" + start + ", " + start + " + " + len + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["text_changeCase"] = function(block) {
+  var op = block.getFieldValue("CASE");
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_NONE) || '""';
+  if (op === "UPPERCASE") {
+    return ["String(" + text + ").toUpperCase()", Arduino.ORDER_ATOMIC];
+  } else {
+    return ["String(" + text + ").toLowerCase()", Arduino.ORDER_ATOMIC];
+  }
+};
+
+Arduino["text_trim"] = function(block) {
+  var mode = block.getFieldValue("MODE");
+  var text = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_NONE) || '""';
+  var method = "trim";
+  if (mode === "LEFT") method = "trimStart";
+  else if (mode === "RIGHT") method = "trimEnd";
+  // Arduino String no tiene trimStart/trimEnd nativos, usamos trim
+  if (mode !== "BOTH") {
+    Arduino.definitions_["func_trimSide"] = 
+      "String trimSide(String s, bool left, bool right){\n" +
+      "  int start = 0;\n" +
+      "  int end = s.length() - 1;\n" +
+      "  if (left) while (start <= end && isspace(s.charAt(start))) start++;\n" +
+      "  if (right) while (end >= start && isspace(s.charAt(end))) end--;\n" +
+      "  return s.substring(start, end + 1);\n" +
+      "}";
+    if (mode === "LEFT") return ["trimSide(String(" + text + "), true, false)", Arduino.ORDER_ATOMIC];
+    else return ["trimSide(String(" + text + "), false, true)", Arduino.ORDER_ATOMIC];
+  }
+  return ["String(" + text + ").trim()", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["text_prompt_ext"] = function(block) {
+  var msg = Arduino.valueToCode(block, "TEXT", Arduino.ORDER_NONE) || '""';
+  var type = block.getFieldValue("TYPE");
+  if (type === "NUMBER") {
+    return ["Serial.parseFloat()", Arduino.ORDER_ATOMIC];
+  } else {
+    return ["Serial.readStringUntil('\n')", Arduino.ORDER_ATOMIC];
+  }
+};
+
+Arduino["logic_null"] = function(block) {
+  return ["NULL", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["logic_ternary"] = function(block) {
+  var cond = Arduino.valueToCode(block, "IF", Arduino.ORDER_NONE) || "false";
+  var thenBranch = Arduino.valueToCode(block, "THEN", Arduino.ORDER_NONE) || "0";
+  var elseBranch = Arduino.valueToCode(block, "ELSE", Arduino.ORDER_NONE) || "0";
+  return ["(" + cond + " ? " + thenBranch + " : " + elseBranch + ")", Arduino.ORDER_ATOMIC];
+};
+
+Arduino["controls_flow_statements"] = function(block) {
+  var flow = block.getFieldValue("FLOW");
+  return (flow === "BREAK") ? "break;\n" : "continue;\n";
+};
+
+// ========== INFERENCIA DE TIPOS DE VARIABLES ==========
+function inferVariableTypes(workspace) {
+  if (!workspace) return { types: {}, conflicts: {} };
+  var types = {};
+  var seenTypes = {}; // varName -> { tipo: true, ... } (todos los tipos distintos vistos)
+  var blocks = workspace.getAllBlocks(false);
+
+  for (var i = 0; i < blocks.length; i++) {
+    var block = blocks[i];
+    if (block.type === "variables_set") {
+      var varId = block.getFieldValue("VAR");
+      if (!varId) continue;
+      var varName = Arduino.nameDB_.getName(varId, "VARIABLE");
+      var target = block.getInputTargetBlock("VALUE");
+      var inferred = inferBlockType(target);
+
+      if (inferred !== "unknown") {
+        var norm = (inferred === "number") ? "float" : inferred;
+        if (!seenTypes[varName]) seenTypes[varName] = {};
+        seenTypes[varName][norm] = true;
+      }
+      if (inferred !== "unknown" && inferred !== "number") {
+        types[varName] = inferred;
+      } else if (!types[varName]) {
+        types[varName] = "float";
+      }
+    }
+  }
+
+  var conflicts = {};
+  for (var v in seenTypes) {
+    var distinct = Object.keys(seenTypes[v]);
+    if (distinct.length > 1) conflicts[v] = distinct;
+  }
+  return { types: types, conflicts: conflicts };
+}
+
+function inferBlockType(block) {
+  if (!block) return "unknown";
+  var type = block.type;
+  // Bloques de texto
+  if (type === "text" || type === "text_join" || type === "text_length" || 
+      type === "text_indexOf" || type === "text_charAt" || type === "text_getSubstring" ||
+      type === "text_changeCase" || type === "text_trim" || type === "text_prompt_ext" ||
+      type === "esp32_wifi_localip" || type === "esp32_rfid_read_uid" || type === "esp32_ble_get_value") {
+    return "String";
+  }
+  // Bloques booleanos
+  if (type === "logic_boolean" || type === "logic_compare" || type === "logic_operation" || 
+      type === "logic_negate" || type === "math_number_property" || type === "text_isEmpty" ||
+      type === "esp32_button" || type === "esp32_digital_read" || type === "esp32_wifi_connected" ||
+      type === "esp32_ble_connected" || type === "esp32_pir_read" || type === "esp32_flame_sensor" ||
+      type === "esp32_ir_obstacle" || type === "esp32_rfid_present" || type === "esp32_ld2410_presence") {
+    return "bool";
+  }
+  // Bloques numéricos
+  if (type.indexOf("math_") === 0 || type.indexOf("esp32_analog_read") === 0 ||
+      type.indexOf("esp32_touch_read") === 0 || type.indexOf("esp32_dht_") === 0 ||
+      type.indexOf("esp32_ultrasonic_read") === 0 || type.indexOf("esp32_hall_read") === 0 ||
+      type.indexOf("esp32_potentiometer") === 0 || type.indexOf("esp32_ldr") === 0 ||
+      type.indexOf("esp32_soil_moisture") === 0 || type.indexOf("esp32_rain_sensor") === 0 ||
+      type.indexOf("esp32_mq") === 0 || type.indexOf("esp32_bmp280_") === 0 ||
+      type.indexOf("esp32_ld2410_distance") === 0 || type.indexOf("esp32_tcs3200_read") === 0 ||
+      type.indexOf("esp32_inmp441_read_level") === 0 || type.indexOf("esp32_ds18b20_read") === 0 ||
+      type.indexOf("esp32_mpu6050_") === 0 || type.indexOf("esp32_map") === 0 ||
+      type.indexOf("esp32_millis") === 0 || type.indexOf("esp32_random") === 0 ||
+      type.indexOf("esp32_ky038_analog") === 0 ||
+      type.indexOf("esp32_tds_read") === 0) {
+    return "float";
+  }
+  // Si es una variable, seguir la cadena
+  if (type === "variables_get") {
+    return "unknown"; // Se resolverá en la segunda pasada
+  }
+  return "unknown";
+}
+
+// Marca con un icono de advertencia los bloques "variables_set"/"variables_get"
+// cuya variable se usa con mas de un tipo de dato en el workspace.
+function applyVariableConflictWarnings(workspace, conflicts) {
+  if (!workspace) return;
+  var blocks = workspace.getAllBlocks(false);
+  for (var i = 0; i < blocks.length; i++) {
+    var block = blocks[i];
+    if (block.type !== "variables_set" && block.type !== "variables_get") continue;
+    if (typeof block.setWarningText !== "function") continue;
+    var varId = block.getFieldValue("VAR");
+    var varName = varId ? Arduino.nameDB_.getName(varId, "VARIABLE") : null;
+    if (varName && conflicts[varName]) {
+      block.setWarningText(
+        'La variable "' + varName + '" se esta usando con mas de un tipo de dato (' +
+        conflicts[varName].join(", ") + '). Arduino no permite eso: usa una variable ' +
+        'distinta para cada tipo de dato.'
+      );
+    } else {
+      block.setWarningText(null);
+    }
+  }
+}
+
+// Guardar referencia al init original
+var originalArduinoInit = Arduino.init;
+Arduino.init = function(workspace) {
+  originalArduinoInit.call(this, workspace);
+  var inferred = inferVariableTypes(workspace);
+  this.varTypes_ = inferred.types;
+  this.varTypeConflicts_ = inferred.conflicts;
+  applyVariableConflictWarnings(workspace, inferred.conflicts);
+};
+
+Arduino["variables_get"] = function(block) {
+  var v = Arduino.nameDB_.getName(block.getFieldValue("VAR"), "VARIABLE");
+  var varType = (Arduino.varTypes_ && Arduino.varTypes_[v]) || "float";
+  var defaultVal = (varType === "String") ? '""' : (varType === "bool") ? "false" : "0";
+  if (!Arduino.definitions_["var_decl_" + v]) {
+    Arduino.definitions_["var_decl_" + v] = varType + " " + v + " = " + defaultVal + ";";
+  }
+  return [v, Arduino.ORDER_ATOMIC];
+};
+
+Arduino["variables_set"] = function(block) {
+  var val = Arduino.valueToCode(block, "VALUE", 14) || "0";
+  var v = Arduino.nameDB_.getName(block.getFieldValue("VAR"), "VARIABLE");
+  var varType = (Arduino.varTypes_ && Arduino.varTypes_[v]) || "float";
+  var defaultVal = (varType === "String") ? '""' : (varType === "bool") ? "false" : "0";
+  if (!Arduino.definitions_["var_decl_" + v]) {
+    Arduino.definitions_["var_decl_" + v] = varType + " " + v + " = " + defaultVal + ";";
+  }
+  return v + " = " + val + ";\n";
+};
+// ========== COLORES DE BLOQUES NATIVOS ==========
+// Solo modifica el metodo init de cada bloque nativo para cambiar el color,
+// sin reemplazar el objeto completo (eso romperia Blockly).
+(function() {
+  var nativos = {
+    'text': '#8E44AD',
+    'text_join': '#8E44AD',
+    'text_length': '#8E44AD',
+    'text_isEmpty': '#8E44AD',
+    'text_indexOf': '#8E44AD',
+    'text_charAt': '#8E44AD',
+    'text_getSubstring': '#8E44AD',
+    'text_changeCase': '#8E44AD',
+    'text_trim': '#8E44AD',
+    'text_prompt_ext': '#8E44AD',
+    'controls_if': '#FFAB19',
+    'controls_ifelse': '#FFAB19',
+    'controls_repeat_ext': '#FFAB19',
+    'controls_whileUntil': '#FFAB19',
+    'controls_for': '#FFAB19',
+    'controls_flow_statements': '#FFAB19',
+    'logic_compare': '#59C059',
+    'logic_operation': '#59C059',
+    'logic_negate': '#59C059',
+    'logic_boolean': '#59C059',
+    'logic_null': '#59C059',
+    'logic_ternary': '#59C059',
+    'math_number': '#2980B9',
+    'math_arithmetic': '#2980B9',
+    'math_random_int': '#2980B9',
+    'math_single': '#2980B9',
+    'math_trig': '#2980B9',
+    'math_constant': '#2980B9',
+    'math_number_property': '#2980B9',
+    'math_round': '#2980B9',
+    'math_modulo': '#2980B9',
+    'math_constrain': '#2980B9',
+    'math_random_float': '#2980B9',
+    'procedures_defnoreturn': '#795548',
+    'procedures_defreturn': '#795548',
+    'procedures_callnoreturn': '#795548',
+    'procedures_callreturn': '#795548',
+    'procedures_ifreturn': '#795548'
+  };
+  for (var name in nativos) {
+    if (Blockly.Blocks[name] && Blockly.Blocks[name].init) {
+      (function(blockName, color) {
+        var originalInit = Blockly.Blocks[blockName].init;
+        Blockly.Blocks[blockName].init = function() {
+          originalInit.call(this);
+          this.setColour(color);
+        };
+      })(name, nativos[name]);
+    }
+  }
+  // Variables: se manejan de forma especial por Blockly, no las tocamos para no romper el flyout
+})();
+
+// ========== EJEMPLOS PRE-CARGADOS ==========
+var EJEMPLOS = {
+  blink: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_pin_mode" id="pm1"><field name="PIN">2</field><field name="MODE">OUTPUT</field></block></statement><statement name="LOOP"><block type="esp32_digital_write" id="dw1"><field name="PIN">2</field><field name="STATE">HIGH</field><next><block type="esp32_delay" id="d1"><value name="MS"><block type="math_number" id="n1"><field name="NUM">1000</field></block></value><next><block type="esp32_digital_write" id="dw2"><field name="PIN">2</field><field name="STATE">LOW</field><next><block type="esp32_delay" id="d2"><value name="MS"><block type="math_number" id="n2"><field name="NUM">1000</field></block></value></block></next></block></next></block></next></block></statement></block></xml>',
+
+  wifi_scan: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field></block></statement><statement name="LOOP"><block type="variables_set" id="vs1"><field name="VAR">n</field><value name="VALUE"><block type="esp32_wifi_scan" id="ws1"></block></value><next><block type="esp32_serial_print" id="sp1"><value name="TEXT"><block type="text" id="t1"><field name="TEXT">Redes encontradas: </field></block></value><next><block type="esp32_serial_println" id="sp2"><value name="TEXT"><block type="variables_get" id="vg1"><field name="VAR">n</field></block></value><next><block type="esp32_delay" id="dl1"><value name="MS"><block type="math_number" id="mn1"><field name="NUM">5000</field></block></value></block></next></block></next></block></next></block></statement></block></xml>',
+
+  ble_server: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_ble_begin" id="ble1"><field name="NAME">MiESP32</field></block></next></block></statement><statement name="LOOP"><block type="controls_if" id="ci1"><value name="IF0"><block type="esp32_ble_connected" id="bc1"></block></value><statement name="DO0"><block type="esp32_serial_println" id="sp3"><value name="TEXT"><block type="text" id="t2"><field name="TEXT">Cliente BLE conectado</field></block></value></block></statement><next><block type="esp32_delay" id="dl2"><value name="MS"><block type="math_number" id="mn2"><field name="NUM">1000</field></block></value></block></next></block></statement></block></xml>',
+
+  web_server: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_wifi_begin" id="wb1"><value name="SSID"><block type="text" id="t1"><field name="TEXT">MiWiFi</field></block></value><value name="PASS"><block type="text" id="t2"><field name="TEXT">12345678</field></block></value><next><block type="esp32_serial_println" id="sp1"><value name="TEXT"><block type="esp32_wifi_localip" id="ip1"></block></value><next><block type="esp32_web_server_begin" id="wsb1"><value name="PORT"><block type="math_number" id="n1"><field name="NUM">80</field></block></value><next><block type="esp32_web_server_on" id="wso1"><value name="PATH"><block type="text" id="t3"><field name="TEXT">/</field></block></value><statement name="DO"><block type="esp32_web_send" id="wss1"><value name="TEXT"><block type="text" id="t4"><field name="TEXT">&lt;h1&gt;Hola desde ESP32!&lt;/h1&gt;</field></block></value></block></statement></block></next></block></next></block></next></block></statement><statement name="LOOP"><block type="esp32_web_server_handle" id="wsh1"></block></statement></block></xml>',
+
+  web_led: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_pin_mode" id="pm1"><field name="PIN">2</field><field name="MODE">OUTPUT</field><next><block type="esp32_wifi_begin" id="wb1"><value name="SSID"><block type="text" id="t1"><field name="TEXT">MiWiFi</field></block></value><value name="PASS"><block type="text" id="t2"><field name="TEXT">12345678</field></block></value><next><block type="esp32_serial_println" id="sp1"><value name="TEXT"><block type="esp32_wifi_localip" id="ip1"></block></value><next><block type="esp32_web_server_begin" id="wsb1"><value name="PORT"><block type="math_number" id="n1"><field name="NUM">80</field></block></value><next><block type="esp32_web_server_on" id="wso1"><value name="PATH"><block type="text" id="t3"><field name="TEXT">/</field></block></value><statement name="DO"><block type="esp32_web_send" id="wss1"><value name="TEXT"><block type="text" id="t4"><field name="TEXT">&lt;html&gt;&lt;body style=\'font-family:sans-serif;text-align:center;margin-top:60px\'&gt;&lt;h1&gt;Control LED ESP32&lt;/h1&gt;&lt;a href=\'/on\'&gt;&lt;button style=\'padding:14px 28px;font-size:18px;margin:6px\'&gt;Encender&lt;/button&gt;&lt;/a&gt;&lt;a href=\'/off\'&gt;&lt;button style=\'padding:14px 28px;font-size:18px;margin:6px\'&gt;Apagar&lt;/button&gt;&lt;/a&gt;&lt;/body&gt;&lt;/html&gt;</field></block></value></block></statement><next><block type="esp32_web_server_on" id="wso2"><value name="PATH"><block type="text" id="t5"><field name="TEXT">/on</field></block></value><statement name="DO"><block type="esp32_digital_write" id="dw1"><field name="PIN">2</field><field name="STATE">HIGH</field><next><block type="esp32_web_send" id="wss2"><value name="TEXT"><block type="text" id="t6"><field name="TEXT">LED encendido</field></block></value></block></next></block></statement><next><block type="esp32_web_server_on" id="wso3"><value name="PATH"><block type="text" id="t7"><field name="TEXT">/off</field></block></value><statement name="DO"><block type="esp32_digital_write" id="dw2"><field name="PIN">2</field><field name="STATE">LOW</field><next><block type="esp32_web_send" id="wss3"><value name="TEXT"><block type="text" id="t8"><field name="TEXT">LED apagado</field></block></value></block></next></block></statement></block></next></block></next></block></next></block></next></block></next></block></next></block></next></block></statement><statement name="LOOP"><block type="esp32_web_server_handle" id="wsh1"></block></statement></block></xml>',
+
+  adc_dac: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field></block></statement><statement name="LOOP"><block type="variables_set" id="vs1"><field name="VAR">valor</field><value name="VALUE"><block type="esp32_analog_read" id="ar1"><field name="PIN">34</field></block></value><next><block type="variables_set" id="vs2"><field name="VAR">salida</field><value name="VALUE"><block type="esp32_map" id="map1"><value name="VAL"><block type="variables_get" id="vg1"><field name="VAR">valor</field></block></value><value name="FROM_LOW"><block type="math_number" id="mn1"><field name="NUM">0</field></block></value><value name="FROM_HIGH"><block type="math_number" id="mn2"><field name="NUM">4095</field></block></value><value name="TO_LOW"><block type="math_number" id="mn3"><field name="NUM">0</field></block></value><value name="TO_HIGH"><block type="math_number" id="mn4"><field name="NUM">255</field></block></value></block></value><next><block type="esp32_dac_write" id="dw1"><field name="PIN">25</field><value name="VALUE"><block type="variables_get" id="vg2"><field name="VAR">salida</field></block></value><next><block type="esp32_serial_print" id="sp1"><value name="TEXT"><block type="text" id="t1"><field name="TEXT">ADC: </field></block></value><next><block type="esp32_serial_print" id="sp2"><value name="TEXT"><block type="variables_get" id="vg3"><field name="VAR">valor</field></block></value><next><block type="esp32_serial_print" id="sp3"><value name="TEXT"><block type="text" id="t2"><field name="TEXT"> -> DAC: </field></block></value><next><block type="esp32_serial_println" id="sp4"><value name="TEXT"><block type="variables_get" id="vg4"><field name="VAR">salida</field></block></value><next><block type="esp32_delay" id="dl1"><value name="MS"><block type="math_number" id="mn5"><field name="NUM">100</field></block></value></block></next></block></next></block></next></block></next></block></next></block></next></block></next></block></statement></block></xml>',
+  bt_led: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_pin_mode" id="pm1"><field name="PIN">2</field><field name="MODE">OUTPUT</field><next><block type="esp32_ble_begin" id="ble1"><field name="NAME">ESP32_LED</field></block></next></block></next></block></statement><statement name="LOOP"><block type="controls_if" id="ci1"><mutation else="1"></mutation><value name="IF0"><block type="logic_compare" id="lc1"><field name="OP">EQ</field><value name="A"><block type="esp32_ble_get_value" id="bv1"></block></value><value name="B"><block type="text" id="t1"><field name="TEXT">1</field></block></value></block></value><statement name="DO0"><block type="esp32_digital_write" id="dw1"><field name="PIN">2</field><field name="STATE">HIGH</field></block></statement><statement name="ELSE"><block type="esp32_digital_write" id="dw2"><field name="PIN">2</field><field name="STATE">LOW</field></block></statement><next><block type="esp32_delay" id="dl1"><value name="MS"><block type="math_number" id="mn1"><field name="NUM">100</field></block></value></block></next></block></statement></block></xml>',
+
+  touch: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field></block></statement><statement name="LOOP"><block type="variables_set" id="vs1"><field name="VAR">t</field><value name="VALUE"><block type="esp32_touch_read" id="tr1"><field name="PIN">4</field></block></value><next><block type="esp32_serial_print" id="sp1"><value name="TEXT"><block type="text" id="t1"><field name="TEXT">Touch: </field></block></value><next><block type="esp32_serial_println" id="sp2"><value name="TEXT"><block type="variables_get" id="vg1"><field name="VAR">t</field></block></value><next><block type="controls_if" id="ci1"><value name="IF0"><block type="logic_compare" id="lc1"><field name="OP">LT</field><value name="A"><block type="variables_get" id="vg2"><field name="VAR">t</field></block></value><value name="B"><block type="math_number" id="mn1"><field name="NUM">20</field></block></value></block></value><statement name="DO0"><block type="esp32_serial_println" id="sp3"><value name="TEXT"><block type="text" id="t2"><field name="TEXT">TOCADO!</field></block></value></block></statement><next><block type="esp32_delay" id="dl1"><value name="MS"><block type="math_number" id="mn2"><field name="NUM">200</field></block></value></block></next></block></next></block></next></block></next></block></statement></block></xml>',
+
+  pwm_servo: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_servo_attach" id="sa1"><field name="PIN">18</field></block></statement><statement name="LOOP"><block type="esp32_servo_write" id="sw1"><value name="ANGLE"><block type="math_number" id="n1"><field name="NUM">0</field></block></value><next><block type="esp32_delay" id="d1"><value name="MS"><block type="math_number" id="n2"><field name="NUM">1000</field></block></value><next><block type="esp32_servo_write" id="sw2"><value name="ANGLE"><block type="math_number" id="n3"><field name="NUM">90</field></block></value><next><block type="esp32_delay" id="d2"><value name="MS"><block type="math_number" id="n4"><field name="NUM">1000</field></block></value><next><block type="esp32_servo_write" id="sw3"><value name="ANGLE"><block type="math_number" id="n5"><field name="NUM">180</field></block></value><next><block type="esp32_delay" id="d3"><value name="MS"><block type="math_number" id="n6"><field name="NUM">1000</field></block></value></block></next></block></next></block></next></block></next></block></next></block></statement></block></xml>',
+
+  bmp280: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_bmp280_begin" id="bmp1"><field name="ADDR">0x76</field></block></next></block></statement><statement name="LOOP"><block type="esp32_serial_print" id="sp1"><value name="TEXT"><block type="text" id="t1"><field name="TEXT">Temp: </field></block></value><next><block type="esp32_serial_print" id="sp2"><value name="TEXT"><block type="esp32_bmp280_temp" id="bt1"></block></value><next><block type="esp32_serial_println" id="sp3"><value name="TEXT"><block type="text" id="t2"><field name="TEXT"> C</field></block></value><next><block type="esp32_delay" id="dl1"><value name="MS"><block type="math_number" id="mn1"><field name="NUM">2000</field></block></value></block></next></block></next></block></next></block></statement></block></xml>',
+  deep_sleep: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_serial_println" id="sp1"><value name="TEXT"><block type="text" id="t1"><field name="TEXT">Despertando...</field></block></value></block></next></block></statement><statement name="LOOP"><block type="esp32_serial_println" id="sp2"><value name="TEXT"><block type="text" id="t2"><field name="TEXT">Durmiendo 10 segundos</field></block></value><next><block type="esp32_deep_sleep" id="ds1"><value name="SEC"><block type="math_number" id="n1"><field name="NUM">10</field></block></value></block></next></block></statement></block></xml>',
+  now_master: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_now_begin" id="now1"><next><block type="esp32_now_add_peer" id="now2"><field name="MAC">FF:FF:FF:FF:FF:FF</field><next><block type="esp32_serial_println" id="sp1"><value name="TEXT"><block type="text" id="t1"><field name="TEXT">Master ESP-NOW listo. MAC: </field></block></value><next><block type="esp32_serial_println" id="sp2"><value name="TEXT"><block type="esp32_now_get_mac" id="mac1"></block></value></block></next></block></next></block></next></block></next></block></statement><statement name="LOOP"><block type="esp32_now_send_text" id="nst1"><field name="MAC">FF:FF:FF:FF:FF:FF</field><value name="TEXT"><block type="text" id="t2"><field name="TEXT">Hola Esclavo</field></block></value><next><block type="esp32_now_send_number" id="nsn1"><field name="MAC">FF:FF:FF:FF:FF:FF</field><value name="NUM"><block type="math_number" id="n1"><field name="NUM">123</field></block></value><next><block type="esp32_serial_println" id="sp3"><value name="TEXT"><block type="text" id="t3"><field name="TEXT">Datos enviados por ESP-NOW</field></block></value><next><block type="esp32_delay" id="dl1"><value name="MS"><block type="math_number" id="n2"><field name="NUM">2000</field></block></value></block></next></block></next></block></next></block></statement></block></xml>',
+
+  now_slave: '<xml xmlns="https://developers.google.com/blockly/xml"><block type="esp32_setup_loop" id="main" x="20" y="20"><statement name="SETUP"><block type="esp32_serial_begin" id="sb1"><field name="BAUD">115200</field><next><block type="esp32_pin_mode" id="pm1"><field name="PIN">2</field><field name="MODE">OUTPUT</field><next><block type="esp32_now_begin" id="now1"><next><block type="esp32_serial_println" id="sp1"><value name="TEXT"><block type="text" id="t1"><field name="TEXT">Esclavo ESP-NOW listo</field></block></value></block></next></block></next></block></next></block></statement><statement name="LOOP"><block type="esp32_now_on_receive" id="nrc1"><statement name="DO"><block type="esp32_serial_print" id="sp2"><value name="TEXT"><block type="text" id="t2"><field name="TEXT">Recibido texto: </field></block></value><next><block type="esp32_serial_println" id="sp3"><value name="TEXT"><block type="esp32_now_received_text" id="rt1"></block></value><next><block type="esp32_serial_print" id="sp4"><value name="TEXT"><block type="text" id="t3"><field name="TEXT">Recibido numero: </field></block></value><next><block type="esp32_serial_println" id="sp5"><value name="TEXT"><block type="esp32_now_received_number" id="rn1"></block></value><next><block type="controls_if" id="ci1"><value name="IF0"><block type="logic_compare" id="lc1"><field name="OP">EQ</field><value name="A"><block type="esp32_now_received_text" id="rt2"></block></value><value name="B"><block type="text" id="t4"><field name="TEXT">Hola Esclavo</field></block></value></block></value><statement name="DO0"><block type="esp32_digital_write" id="dw1"><field name="PIN">2</field><field name="STATE">HIGH</field><next><block type="esp32_delay" id="dl2"><value name="MS"><block type="math_number" id="n3"><field name="NUM">500</field></block></value><next><block type="esp32_digital_write" id="dw2"><field name="PIN">2</field><field name="STATE">LOW</field></next></block></next></block></statement></block></next></block></next></block></next></block></next></block></statement></block></statement></block></xml>',
+
+};
+
+function cargarEjemplo(tipo) {
+  try {
+    var xmlText = EJEMPLOS[tipo];
+    if (!xmlText) { showStatus("Ejemplo no encontrado: " + tipo, "err"); return; }
+    var xmlDom = Blockly.utils.xml.textToDom(xmlText);
+    workspace.clear();
+    Blockly.Xml.domToWorkspace(xmlDom, workspace);
+    showStatus("Ejemplo cargado: " + tipo, "info");
+  } catch (err) {
+    console.error(err);
+    showStatus("Error cargando ejemplo: " + err.message, "err");
+  }
+}
+
+// ========== GUARDAR / CARGAR ==========
+function guardarProyecto() {
+  try {
+    var xml = Blockly.Xml.workspaceToDom(workspace);
+    var xmlText = Blockly.Xml.domToText(xml);
+    var blob = new Blob([xmlText], {type: "application/json"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "proyecto_esp32.json";
+    a.click();
+    showStatus("Proyecto guardado.", "ok");
+  } catch (err) { showStatus("Error al guardar: " + err.message, "err"); }
+}
+
+function cargarProyecto(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var xmlDom = Blockly.utils.xml.textToDom(e.target.result);
+      workspace.clear();
+      Blockly.Xml.domToWorkspace(xmlDom, workspace);
+      showStatus("Proyecto cargado.", "ok");
+    } catch (err) { showStatus("Error al cargar: " + err.message, "err"); }
+  };
+  reader.readAsText(file);
+  input.value = "";
+}
+
+// ========== GENERAR / DESCARGAR / SUBIR ==========
+function generarCodigo() {
+  try {
+    var code = Arduino.workspaceToCode(workspace);
+    document.getElementById("codeArea").value = code;
+    var conflicts = Arduino.varTypeConflicts_ || {};
+    var conflictNames = Object.keys(conflicts);
+    if (conflictNames.length > 0) {
+      showStatus(
+        "Atencion: la variable \"" + conflictNames.join('", "') +
+        "\" se usa con mas de un tipo de dato. Revisa los bloques marcados con ! " +
+        "y usa una variable distinta para cada tipo.",
+        "err"
+      );
+    } else {
+      showStatus("Codigo generado correctamente.", "info");
+    }
+    return code;
+  } catch (e) {
+    document.getElementById("codeArea").value = "ERROR: " + e.message;
+    showStatus("Error al generar codigo.", "err");
+    console.error(e);
+    return null;
+  }
+}
+
+function descargarCodigo() {
+  var code = document.getElementById("codeArea").value;
+  if (!code || code.startsWith("ERROR")) {
+    showStatus("Primero genera el codigo.", "err");
+    return;
+  }
+  var blob = new Blob([code], {type: "text/plain"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "sketch_esp32.ino";
+  a.click();
+  showStatus("Archivo descargado.", "ok");
+}
+
+var MODELO_A_BOARD = { dev: "esp32", s3: "esp32s3", c3: "esp32c3", c6: "esp32c6" };
+
+var uploadJobId = null;
+var uploadPollInterval = null;
+
+async function subirAAduino() {
+  var code = generarCodigo();
+  if (!code) return;
+  var conflicts = Arduino.varTypeConflicts_ || {};
+  var conflictNames = Object.keys(conflicts);
+  if (conflictNames.length > 0) {
+    showStatus(
+      "No se puede subir: la variable \"" + conflictNames.join('", "') +
+      "\" se usa con mas de un tipo de dato. Corrige los bloques marcados con ! antes de subir.",
+      "err"
+    );
+    return;
+  }
+  // El agente detiene el monitor serial del lado del servidor antes de
+  // subir (necesita el puerto libre). Lo cerramos aqui tambien en el
+  // navegador para que el indicador ("Monitor activo") no quede encendido
+  // engañosamente mientras se sube el codigo.
+  if (eventSource) { detenerMonitor(); }
+
+  var modelo = document.getElementById("espModel").value;
+  var boardKey = MODELO_A_BOARD[modelo] || "esp32";
+  var btn = document.getElementById("btnSubir");
+  var originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Iniciando...';
+
+  // Obtener puerto seleccionado manualmente si existe
+  var manualPort = document.getElementById("manualPort").value;
+
+  showStatus("Iniciando subida a " + MODELOS[modelo].name + "...", "info");
+  document.getElementById("compileLogPanel").style.display = "block";
+  document.getElementById("compileLogArea").value = "";
+  document.getElementById("btnCancelar").disabled = false;
+
+  try {
+    var payload = {code: code, board: boardKey};
+    if (manualPort) payload.port = manualPort;
+
+    var response = await fetch("http://localhost:5000/upload", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
     });
+    var result = await response.json();
+    if (result.success && result.job_id) {
+      uploadJobId = result.job_id;
+      btn.innerHTML = '<span class="spinner"></span>Subiendo...';
+      showStatus("Subida en progreso. ID: " + uploadJobId, "info");
+      iniciarPollingSubida();
+    } else {
+      showStatus(result.error || "Error iniciando subida.", "err");
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      document.getElementById("btnCancelar").disabled = true;
+    }
+  } catch (err) {
+    showStatus("No se pudo conectar con el agente local. Verifica que este ejecutandose.", "err");
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    document.getElementById("btnCancelar").disabled = true;
+  }
+}
 
-    // ============================================
-    // 2. DEFINIR BLOQUES PERSONALIZADOS
-    // ============================================
+function iniciarPollingSubida() {
+  if (uploadPollInterval) clearInterval(uploadPollInterval);
+  uploadPollInterval = setInterval(pollUploadStatus, 800);
+}
 
-    Blockly.Blocks['arduino_setup_loop'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendDummyInput().appendField("🟦 Arduino Nano");
-        this.appendStatementInput("SETUP").setCheck(null).appendField("setup");
-        this.appendStatementInput("LOOP").setCheck(null).appendField("loop");
-        this.setTooltip("Bloque principal. Todo el código debe ir dentro de setup o loop.");
-        this.setDeletable(false);
-      }
-    };
+async function pollUploadStatus() {
+  if (!uploadJobId) return;
+  try {
+    var res = await fetch("http://localhost:5000/upload/status/" + uploadJobId);
+    var data = await res.json();
+    if (!data.success) return;
 
-    Blockly.Blocks['arduino_pin_mode'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendDummyInput()
-            .appendField("pinMode pin")
-            .appendField(new Blockly.FieldNumber(13, 0, 19), "PIN")
-            .appendField(new Blockly.FieldDropdown([["OUTPUT","OUTPUT"],["INPUT","INPUT"],["INPUT_PULLUP","INPUT_PULLUP"]]), "MODE");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setTooltip("Configura un pin como entrada o salida.");
-      }
-    };
-
-    Blockly.Blocks['arduino_digital_write'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendDummyInput()
-            .appendField("digitalWrite pin")
-            .appendField(new Blockly.FieldNumber(13, 0, 19), "PIN")
-            .appendField(new Blockly.FieldDropdown([["HIGH","HIGH"],["LOW","LOW"]]), "STATE");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setTooltip("Escribe HIGH o LOW en un pin digital.");
-      }
-    };
-
-    Blockly.Blocks['arduino_digital_read'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendDummyInput()
-            .appendField("digitalRead pin")
-            .appendField(new Blockly.FieldNumber(2, 0, 19), "PIN");
-        this.setOutput(true, 'Number');
-        this.setTooltip("Lee el estado de un pin digital (0 o 1).");
-      }
-    };
-
-    Blockly.Blocks['arduino_analog_write'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendDummyInput().appendField("analogWrite pin");
-        this.appendDummyInput().appendField(new Blockly.FieldDropdown([["3","3"],["5","5"],["6","6"],["9","9"],["10","10"],["11","11"]]), "PIN");
-        this.appendValueInput("VALUE").setCheck("Number");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setTooltip("Escribe un valor PWM (0-255) en pines ~3, ~5, ~6, ~9, ~10, ~11.");
-        this.setInputsInline(true);
-      }
-    };
-
-    Blockly.Blocks['arduino_analog_read'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendDummyInput()
-            .appendField("analogRead pin A")
-            .appendField(new Blockly.FieldDropdown([["0","A0"],["1","A1"],["2","A2"],["3","A3"],["4","A4"],["5","A5"],["6","A6"],["7","A7"]]), "PIN");
-        this.setOutput(true, 'Number');
-        this.setTooltip("Lee un valor analógico (0-1023) del pin A0-A7.");
-      }
-    };
-
-    Blockly.Blocks['arduino_delay'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendValueInput("MS").setCheck("Number").appendField("delay");
-        this.appendDummyInput().appendField("ms");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setTooltip("Pausa la ejecución por X milisegundos.");
-        this.setInputsInline(true);
-      }
-    };
-
-    Blockly.Blocks['arduino_serial_begin'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendDummyInput()
-            .appendField("Serial.begin")
-            .appendField(new Blockly.FieldDropdown([["9600","9600"],["115200","115200"],["57600","57600"]]), "BAUD");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setTooltip("Inicia la comunicación serial a la velocidad indicada.");
-      }
-    };
-
-    Blockly.Blocks['arduino_serial_print'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendValueInput("TEXT").setCheck(null).appendField("Serial.print");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setTooltip("Imprime un valor en el monitor serial (sin salto de línea).");
-      }
-    };
-
-    Blockly.Blocks['arduino_serial_println'] = {
-      init: function() {
-        this.setColour(0);
-        this.appendValueInput("TEXT").setCheck(null).appendField("Serial.println");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setTooltip("Imprime un valor en el monitor serial (con salto de línea).");
-      }
-    };
-
-    // ============================================
-    // 3. CREAR GENERADOR ARDUINO
-    // ============================================
-    Blockly.Arduino = new Blockly.Generator('Arduino');
-
-    Blockly.Arduino.ORDER_ATOMIC = 0;
-    Blockly.Arduino.ORDER_UNARY_POSTFIX = 1;
-    Blockly.Arduino.ORDER_UNARY_PREFIX = 2;
-    Blockly.Arduino.ORDER_MULTIPLICATIVE = 3;
-    Blockly.Arduino.ORDER_ADDITIVE = 4;
-    Blockly.Arduino.ORDER_SHIFT = 5;
-    Blockly.Arduino.ORDER_RELATIONAL = 6;
-    Blockly.Arduino.ORDER_EQUALITY = 7;
-    Blockly.Arduino.ORDER_BITWISE_AND = 8;
-    Blockly.Arduino.ORDER_BITWISE_XOR = 9;
-    Blockly.Arduino.ORDER_BITWISE_OR = 10;
-    Blockly.Arduino.ORDER_LOGICAL_AND = 11;
-    Blockly.Arduino.ORDER_LOGICAL_OR = 12;
-    Blockly.Arduino.ORDER_CONDITIONAL = 13;
-    Blockly.Arduino.ORDER_ASSIGNMENT = 14;
-    Blockly.Arduino.ORDER_COMMA = 15;
-    Blockly.Arduino.ORDER_NONE = 99;
-
-    Blockly.Arduino.init = function(workspace) {
-      this.definitions_ = Object.create(null);
-      this.functionNames_ = Object.create(null);
-      this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_ || '');
-      this.nameDB_.setVariableMap(workspace.getVariableMap());
-      this.nameDB_.populateProcedures(workspace);
-    };
-
-    Blockly.Arduino.finish = function(code) {
-      const definitions = [];
-      for (let name in this.definitions_) {
-        definitions.push(this.definitions_[name]);
-      }
-      this.definitions_ = Object.create(null);
-      this.functionNames_ = Object.create(null);
-      if (this.nameDB_) this.nameDB_.reset();
-      return definitions.join('\n') + '\n' + code;
-    };
-
-    Blockly.Arduino.scrub_ = function(block, code, opt_thisOnly) {
-      const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
-      const nextCode = opt_thisOnly ? '' : this.blockToCode(nextBlock);
-      return code + nextCode;
-    };
-
-    // ============================================
-    // 4. GENERADORES DE BLOQUES ARDUINO
-    // ============================================
-
-    Blockly.Arduino['arduino_setup_loop'] = function(block) {
-      const setupCode = Blockly.Arduino.statementToCode(block, 'SETUP');
-      const loopCode = Blockly.Arduino.statementToCode(block, 'LOOP');
-      return 'void setup() {\n' + (setupCode || '  \n') + '}\n\nvoid loop() {\n' + (loopCode || '  \n') + '}\n';
-    };
-
-    Blockly.Arduino['arduino_pin_mode'] = function(block) {
-      const pin = block.getFieldValue('PIN');
-      const mode = block.getFieldValue('MODE');
-      return '  pinMode(' + pin + ', ' + mode + ');\n';
-    };
-
-    Blockly.Arduino['arduino_digital_write'] = function(block) {
-      const pin = block.getFieldValue('PIN');
-      const state = block.getFieldValue('STATE');
-      return '  digitalWrite(' + pin + ', ' + state + ');\n';
-    };
-
-    Blockly.Arduino['arduino_digital_read'] = function(block) {
-      const pin = block.getFieldValue('PIN');
-      return ['digitalRead(' + pin + ')', Blockly.Arduino.ORDER_ATOMIC];
-    };
-
-    Blockly.Arduino['arduino_analog_write'] = function(block) {
-      const pin = block.getFieldValue('PIN');
-      const value = Blockly.Arduino.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_ATOMIC) || '0';
-      return '  analogWrite(' + pin + ', ' + value + ');\n';
-    };
-
-    Blockly.Arduino['arduino_analog_read'] = function(block) {
-      const pin = block.getFieldValue('PIN');
-      return ['analogRead(' + pin + ')', Blockly.Arduino.ORDER_ATOMIC];
-    };
-
-    Blockly.Arduino['arduino_delay'] = function(block) {
-      const ms = Blockly.Arduino.valueToCode(block, 'MS', Blockly.Arduino.ORDER_ATOMIC) || '1000';
-      return '  delay(' + ms + ');\n';
-    };
-
-    Blockly.Arduino['arduino_serial_begin'] = function(block) {
-      const baud = block.getFieldValue('BAUD');
-      return '  Serial.begin(' + baud + ');\n';
-    };
-
-    Blockly.Arduino['arduino_serial_print'] = function(block) {
-      const text = Blockly.Arduino.valueToCode(block, 'TEXT', Blockly.Arduino.ORDER_ATOMIC) || '""';
-      return '  Serial.print(' + text + ');\n';
-    };
-
-    Blockly.Arduino['arduino_serial_println'] = function(block) {
-      const text = Blockly.Arduino.valueToCode(block, 'TEXT', Blockly.Arduino.ORDER_ATOMIC) || '""';
-      return '  Serial.println(' + text + ');\n';
-    };
-
-    // ============================================
-    // 5. GENERADORES DE BLOQUES NATIVOS
-    // ============================================
-
-    Blockly.Arduino['math_number'] = function(block) {
-      const code = Number(block.getFieldValue('NUM'));
-      return [code.toString(), Blockly.Arduino.ORDER_ATOMIC];
-    };
-
-    Blockly.Arduino['math_arithmetic'] = function(block) {
-      const OPERATORS = {
-        'ADD': [' + ', Blockly.Arduino.ORDER_ADDITIVE],
-        'MINUS': [' - ', Blockly.Arduino.ORDER_ADDITIVE],
-        'MULTIPLY': [' * ', Blockly.Arduino.ORDER_MULTIPLICATIVE],
-        'DIVIDE': [' / ', Blockly.Arduino.ORDER_MULTIPLICATIVE],
-        'POWER': [' ^ ', Blockly.Arduino.ORDER_NONE]
-      };
-      const tuple = OPERATORS[block.getFieldValue('OP')];
-      const argument0 = Blockly.Arduino.valueToCode(block, 'A', tuple[1]) || '0';
-      const argument1 = Blockly.Arduino.valueToCode(block, 'B', tuple[1]) || '0';
-      const code = argument0 + tuple[0] + argument1;
-      return [code, tuple[1]];
-    };
-
-    Blockly.Arduino['math_random_int'] = function(block) {
-      const argument0 = Blockly.Arduino.valueToCode(block, 'FROM', Blockly.Arduino.ORDER_NONE) || '0';
-      const argument1 = Blockly.Arduino.valueToCode(block, 'TO', Blockly.Arduino.ORDER_NONE) || '0';
-      return ['random(' + argument0 + ', ' + argument1 + ' + 1)', Blockly.Arduino.ORDER_ATOMIC];
-    };
-
-    Blockly.Arduino['text'] = function(block) {
-      const code = Blockly.Arduino.quote_(block.getFieldValue('TEXT'));
-      return [code, Blockly.Arduino.ORDER_ATOMIC];
-    };
-
-    Blockly.Arduino['logic_compare'] = function(block) {
-      const OPERATORS = {
-        'EQ': '==', 'NEQ': '!=', 'LT': '<', 'LTE': '<=', 'GT': '>', 'GTE': '>='
-      };
-      const operator = OPERATORS[block.getFieldValue('OP')];
-      const argument0 = Blockly.Arduino.valueToCode(block, 'A', Blockly.Arduino.ORDER_RELATIONAL) || '0';
-      const argument1 = Blockly.Arduino.valueToCode(block, 'B', Blockly.Arduino.ORDER_RELATIONAL) || '0';
-      const code = argument0 + ' ' + operator + ' ' + argument1;
-      return [code, Blockly.Arduino.ORDER_RELATIONAL];
-    };
-
-    Blockly.Arduino['logic_operation'] = function(block) {
-      const operator = (block.getFieldValue('OP') == 'AND') ? '&&' : '||';
-      const order = (operator == '&&') ? Blockly.Arduino.ORDER_LOGICAL_AND : Blockly.Arduino.ORDER_LOGICAL_OR;
-      let argument0 = Blockly.Arduino.valueToCode(block, 'A', order);
-      let argument1 = Blockly.Arduino.valueToCode(block, 'B', order);
-      if (!argument0) argument0 = 'false';
-      if (!argument1) argument1 = 'false';
-      return [argument0 + ' ' + operator + ' ' + argument1, order];
-    };
-
-    Blockly.Arduino['logic_negate'] = function(block) {
-      const argument0 = Blockly.Arduino.valueToCode(block, 'BOOL', Blockly.Arduino.ORDER_UNARY_PREFIX) || 'false';
-      return ['!' + argument0, Blockly.Arduino.ORDER_UNARY_PREFIX];
-    };
-
-    Blockly.Arduino['logic_boolean'] = function(block) {
-      const code = (block.getFieldValue('BOOL') == 'TRUE') ? 'true' : 'false';
-      return [code, Blockly.Arduino.ORDER_ATOMIC];
-    };
-
-    Blockly.Arduino['controls_if'] = function(block) {
-      let n = 0;
-      let code = '';
-      let branchCode, conditionCode;
-      do {
-        conditionCode = Blockly.Arduino.valueToCode(block, 'IF' + n, Blockly.Arduino.ORDER_NONE) || 'false';
-        branchCode = Blockly.Arduino.statementToCode(block, 'DO' + n);
-        code += (n > 0 ? ' else ' : '') + 'if (' + conditionCode + ') {\n' + branchCode + '}';
-        n++;
-      } while (block.getInput('IF' + n));
-
-      if (block.getInput('ELSE')) {
-        branchCode = Blockly.Arduino.statementToCode(block, 'ELSE');
-        code += ' else {\n' + branchCode + '}';
-      }
-      return code + '\n';
-    };
-
-    Blockly.Arduino['controls_ifelse'] = Blockly.Arduino['controls_if'];
-
-    Blockly.Arduino['controls_repeat_ext'] = function(block) {
-      const repeats = Blockly.Arduino.valueToCode(block, 'TIMES', Blockly.Arduino.ORDER_ADDITIVE) || '0';
-      let branch = Blockly.Arduino.statementToCode(block, 'DO');
-      branch = Blockly.Arduino.addLoopTrap(branch, block);
-      const loopVar = Blockly.Arduino.nameDB_.getDistinctName('count', Blockly.Variables.NAME_TYPE);
-      return '  for (int ' + loopVar + ' = 0; ' + loopVar + ' < ' + repeats + '; ' + loopVar + '++) {\n' + branch + '  }\n';
-    };
-
-    Blockly.Arduino['controls_whileUntil'] = function(block) {
-      const until = block.getFieldValue('MODE') == 'UNTIL';
-      let argument0 = Blockly.Arduino.valueToCode(block, 'BOOL', Blockly.Arduino.ORDER_NONE) || 'false';
-      if (until) argument0 = '!' + argument0;
-      let branch = Blockly.Arduino.statementToCode(block, 'DO');
-      branch = Blockly.Arduino.addLoopTrap(branch, block);
-      return '  while (' + argument0 + ') {\n' + branch + '  }\n';
-    };
-
-    Blockly.Arduino['controls_for'] = function(block) {
-      const variable0 = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
-      const argument0 = Blockly.Arduino.valueToCode(block, 'FROM', Blockly.Arduino.ORDER_ASSIGNMENT) || '0';
-      const argument1 = Blockly.Arduino.valueToCode(block, 'TO', Blockly.Arduino.ORDER_ASSIGNMENT) || '0';
-      let branch = Blockly.Arduino.statementToCode(block, 'DO');
-      branch = Blockly.Arduino.addLoopTrap(branch, block);
-      return '  for (int ' + variable0 + ' = ' + argument0 + '; ' + variable0 + ' <= ' + argument1 + '; ' + variable0 + '++) {\n' + branch + '  }\n';
-    };
-
-    Blockly.Arduino['variables_get'] = function(block) {
-      const code = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
-      return [code, Blockly.Arduino.ORDER_ATOMIC];
-    };
-
-    Blockly.Arduino['variables_set'] = function(block) {
-      const argument0 = Blockly.Arduino.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_ASSIGNMENT) || '0';
-      const varName = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
-      return '  ' + varName + ' = ' + argument0 + ';\n';
-    };
-
-    // ============================================
-    // 6. FUNCIONES DE LA UI
-    // ============================================
-    function generarCodigo() {
-      try {
-        const code = Blockly.Arduino.workspaceToCode(workspace);
-        document.getElementById('codeArea').value = code;
-        showStatus('Código generado correctamente.', 'info');
-        return code;
-      } catch (e) {
-        document.getElementById('codeArea').value = '❌ ERROR: ' + e.message;
-        showStatus('Error al generar código. Revisa la consola (F12).', 'err');
-        console.error(e);
-        return null;
-      }
+    // Actualizar logs
+    var logArea = document.getElementById("compileLogArea");
+    var newLogs = data.logs.join("\n");
+    if (logArea.value !== newLogs) {
+      logArea.value = newLogs;
+      logArea.scrollTop = logArea.scrollHeight;
     }
 
-    function descargarCodigo() {
-      const code = document.getElementById('codeArea').value;
-      if (!code || code.startsWith('❌')) {
-        showStatus('Primero genera el código.', 'err');
-        return;
-      }
-      const blob = new Blob([code], { type: 'text/plain' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'sketch_arduino.ino';
-      a.click();
-      showStatus('Archivo descargado.', 'ok');
+    var btn = document.getElementById("btnSubir");
+    var status = data.status;
+
+    if (status === "success") {
+      clearInterval(uploadPollInterval);
+      uploadPollInterval = null;
+      uploadJobId = null;
+      btn.disabled = false;
+      btn.innerHTML = 'Subir a ESP32';
+      document.getElementById("btnCancelar").disabled = true;
+      showStatus("Subida exitosa a " + data.board + " en puerto " + data.port + "!", "ok");
+    } else if (status === "error") {
+      clearInterval(uploadPollInterval);
+      uploadPollInterval = null;
+      uploadJobId = null;
+      btn.disabled = false;
+      btn.innerHTML = 'Subir a ESP32';
+      document.getElementById("btnCancelar").disabled = true;
+      showStatus("Error: " + (data.error || "Revisa el log de compilacion."), "err");
+    } else if (status === "cancelled") {
+      clearInterval(uploadPollInterval);
+      uploadPollInterval = null;
+      uploadJobId = null;
+      btn.disabled = false;
+      btn.innerHTML = 'Subir a ESP32';
+      document.getElementById("btnCancelar").disabled = true;
+      showStatus("Subida cancelada por el usuario.", "info");
+    }
+  } catch (e) {}
+}
+
+async function cancelarSubida() {
+  if (!uploadJobId) return;
+  try {
+    await fetch("http://localhost:5000/upload/cancel/" + uploadJobId, {method: "POST"});
+    document.getElementById("btnCancelar").disabled = true;
+    showStatus("Cancelando subida...", "info");
+  } catch (e) {
+    showStatus("Error al cancelar.", "err");
+  }
+}
+
+// ========== INDICADOR DE CONEXION ==========
+var connPollInterval = null;
+
+function iniciarMonitoreoConexion() {
+  actualizarConexion();
+  if (connPollInterval) clearInterval(connPollInterval);
+  connPollInterval = setInterval(actualizarConexion, 3000);
+}
+
+async function actualizarConexion() {
+  try {
+    var res = await fetch("http://localhost:5000/status");
+    var data = await res.json();
+    var dot = document.getElementById("connDot");
+    var text = document.getElementById("connText");
+    var portSpan = document.getElementById("connPort");
+    var manualSelect = document.getElementById("manualPort");
+
+    if (data.detected_port) {
+      dot.classList.add("connected");
+      text.textContent = "Conectado";
+      portSpan.textContent = data.detected_port;
+    } else if (data.ports && data.ports.length > 0) {
+      dot.classList.remove("connected");
+      text.textContent = "Puertos detectados";
+      portSpan.textContent = data.ports.length + " disponibles";
+    } else {
+      dot.classList.remove("connected");
+      text.textContent = "Sin dispositivo";
+      portSpan.textContent = "";
     }
 
-    async function subirAAduino() {
-      const code = generarCodigo();
-      if (!code) return;
-
-      const btn = document.getElementById('btnSubir');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Subiendo...';
-      showStatus('Conectando con el agente local...', 'info');
-
-      try {
-        const response = await fetch('http://localhost:5000/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: code })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          showStatus('✅ ' + result.message, 'ok');
-        } else {
-          showStatus('❌ ' + result.error, 'err');
-        }
-      } catch (err) {
-        showStatus(
-          '❌ No se pudo conectar con el agente local.\n' +
-          'Asegúrate de ejecutar: python agente_local.py',
-          'err'
-        );
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
+    // Actualizar dropdown de puertos manuales
+    var currentVal = manualSelect.value;
+    manualSelect.innerHTML = '<option value="">-- Puerto --</option>';
+    if (data.ports && data.ports.length > 0) {
+      manualSelect.style.display = "inline-block";
+      data.ports.forEach(function(p) {
+        var opt = document.createElement("option");
+        opt.value = p.device;
+        opt.textContent = p.device + " (" + (p.description || "?").substring(0, 20) + ")";
+        if (p.device === currentVal) opt.selected = true;
+        manualSelect.appendChild(opt);
+      });
+    } else {
+      manualSelect.style.display = "none";
     }
+  } catch (e) {
+    var dot = document.getElementById("connDot");
+    var text = document.getElementById("connText");
+    dot.classList.remove("connected");
+    text.textContent = "Agente offline";
+    document.getElementById("connPort").textContent = "";
+    document.getElementById("manualPort").style.display = "none";
+  }
+}
 
-    function showStatus(msg, type) {
-      const el = document.getElementById('statusArea');
-      el.textContent = msg;
-      el.className = '';
-      if (type === 'ok') el.classList.add('status-ok');
-      else if (type === 'err') el.classList.add('status-err');
-      else el.classList.add('status-info');
+// Iniciar monitoreo al cargar
+iniciarMonitoreoConexion();
+
+
+function showStatus(msg, type) {
+  var el = document.getElementById("statusArea");
+  el.textContent = msg;
+  el.className = "";
+  if (type === "ok") el.classList.add("status-ok");
+  else if (type === "err") el.classList.add("status-err");
+  else el.classList.add("status-info");
+}
+
+// ========== MONITOR SERIAL ==========
+var eventSource = null;
+var serialLines = [];
+var maxSerialLines = 500;
+
+function iniciarMonitor() {
+  if (eventSource) { showStatus("El monitor ya esta activo.", "info"); return; }
+  var baud = document.getElementById("serialBaud").value;
+  fetch("http://localhost:5000/serial/start", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({baud: parseInt(baud)})
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.success) {
+      conectarSSE();
+      document.getElementById("serialStatus").classList.add("active");
+      showStatus(data.message, "ok");
+    } else { showStatus(data.message, "err"); }
+  })
+  .catch(function(err) { showStatus("Error al iniciar monitor: " + err.message, "err"); });
+}
+
+function conectarSSE() {
+  eventSource = new EventSource("http://localhost:5000/serial/stream");
+  eventSource.onmessage = function(e) {
+    agregarLineaSerial(e.data);
+  };
+  eventSource.onerror = function() {
+    document.getElementById("serialStatus").classList.remove("active");
+  };
+}
+
+function detenerMonitor() {
+  if (eventSource) { eventSource.close(); eventSource = null; }
+  fetch("http://localhost:5000/serial/stop", {method: "POST"})
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    document.getElementById("serialStatus").classList.remove("active");
+    showStatus(data.message, "info");
+  })
+  .catch(function(err) { showStatus("Error al detener: " + err.message, "err"); });
+}
+
+function limpiarMonitor() {
+  serialLines = [];
+  document.getElementById("serialOutput").textContent = "";
+}
+
+function agregarLineaSerial(texto) {
+  var output = document.getElementById("serialOutput");
+  var timestamp = new Date().toLocaleTimeString("es-ES", {hour12: false});
+  var partes = texto.split("\n");
+  for (var i = 0; i < partes.length; i++) {
+    if (partes[i] === "" && i === partes.length - 1) continue;
+    serialLines.push("[" + timestamp + "] " + partes[i]);
+  }
+  if (serialLines.length > maxSerialLines) {
+    serialLines = serialLines.slice(serialLines.length - maxSerialLines);
+  }
+  output.textContent = serialLines.join("\n");
+  output.scrollTop = output.scrollHeight;
+}
+
+// ========== WORKSPACE ==========
+var workspace = Blockly.inject("blocklyDiv", {
+  toolbox: document.getElementById("toolbox"),
+  trashcan: true,
+  zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
+  grid: { spacing: 20, length: 3, colour: "#ccc", snap: true }
+});
+console.log("Workspace ESP32 listo");
+
+// ========== CODIGO EN VIVO ==========
+var liveCodeTimer = null;
+workspace.addChangeListener(function(event) {
+  if (workspace.isDragging && workspace.isDragging()) return;
+  if (Blockly.Events.isUiEvent && Blockly.Events.isUiEvent(event)) return;
+  if (event.type === Blockly.Events.UI) return;
+  clearTimeout(liveCodeTimer);
+  liveCodeTimer = setTimeout(function() {
+    try {
+      var code = Arduino.workspaceToCode(workspace);
+      document.getElementById("codeArea").value = code;
+    } catch (e) {}
+  }, 300);
+});
+
+async function limpiarEspacio() {
+  try {
+    showStatus("Limpiando espacio en disco...", "info");
+    var res = await fetch("http://localhost:5000/clean", {method: "POST"});
+    var data = await res.json();
+    if (data.success && data.actions) {
+      showStatus("Espacio liberado: " + data.actions.join(" | "), "ok");
+    } else {
+      showStatus("No se pudo limpiar el espacio.", "err");
     }
-  </script>
+  } catch (err) {
+    showStatus("Error al limpiar: " + err.message, "err");
+  }
+}
+</script>
 </body>
 </html>
