@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Descargar agente - Blockly ESP32</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; color: #1f2937; line-height: 1.6; }
+  h1 { font-size: 1.6em; }
+  .btn { display: inline-block; margin: 20px 0; padding: 14px 28px; background: #2563eb; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 1.05em; }
+  .btn:hover { background: #1d4ed8; }
+  ol { padding-left: 20px; }
+  li { margin-bottom: 14px; }
+  .note { background: #fef9c3; border-left: 4px solid #eab308; padding: 10px 14px; margin: 16px 0; border-radius: 4px; font-size: 0.95em; }
+  .back { display: inline-block; margin-top: 30px; color: #2563eb; text-decoration: none; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Descargar el agente local</h1>
+<p>Para programar tu ESP32 desde el editor necesitas un pequeño programa (el "agente") corriendo en tu computadora mientras usas la página. Solo se descarga una vez.</p>
+
+<a class="btn" href="https://github.com/giovanny1412/Gio-Blocks/releases/latest/download/AgenteArduinoNano.exe" download>⬇ Descargar AgenteArduinoNano.exe</a>
+
+<ol>
+  <li><strong>Descarga el archivo</strong> con el botón de arriba (pesa varias decenas de MB, incluye todo lo necesario).</li>
+  <li><strong>Ejecútalo.</strong> Windows puede mostrar una advertencia de "editor desconocido" (SmartScreen) — dale clic en <em>"Más información"</em> y luego <em>"Ejecutar de todas formas"</em>. Es normal en programas sin firma digital, no significa que esté dañado.</li>
+  <li><strong>Deja abierta la ventana negra (consola)</strong> que aparece — es el agente funcionando en segundo plano. Ciérrala solo cuando termines de usar el editor.</li>
+  <li>Abre o vuelve a <a href="https://giovanny1412.github.io/Gio-Blocks/">giovanny1412.github.io/Gio-Blocks</a>. El indicador de arriba a la derecha debería dejar de decir "Agente offline".</li>
+  <li>Al dar clic en <strong>Cargar</strong> por primera vez, el navegador puede pedir permiso para <em>"conectarse a dispositivos en tu red local"</em>. Acepta ese permiso — es necesario para hablar con el agente en tu propia PC.</li>
+</ol>
+
+<div class="note">
+  <strong>La primera subida a una placa nueva tarda más</strong> (puede ser varios minutos): el agente descarga automáticamente el core de ESP32 y las librerías necesarias la primera vez. Las siguientes subidas son mucho más rápidas.
+</div>
+
+<div class="note">
+  Requiere Windows. No necesitas instalar Arduino IDE ni <code>arduino-cli</code> por separado — ya vienen incluidos dentro del programa.
+</div>
+
+<a class="back" href="https://giovanny1412.github.io/Gio-Blocks/">&larr; Volver al editor</a>
+
+</body>
+</html>
