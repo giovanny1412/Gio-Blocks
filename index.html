@@ -3290,7 +3290,146 @@ function appendLog(mensaje) {
     logArea.scrollTop = logArea.scrollHeight;
   }
 }
+async function subirAAduino() {
+  var code = Blockly.Arduino ? Blockly.Arduino.workspaceToCode(workspace) : generarCodigo();
+  if (!code) {
+    showStatus("Error: El área de trabajo está vacía.", "err");
+    return;
+  }
+  
+  var conflicts = Arduino.varTypeConflicts_ || {};
+  var conflictNames = Object.keys(conflicts);
+  if (conflictNames.length > 0) {
+    showStatus(
+      "No se puede subir: la variable \"" + conflictNames.join('", "') +
+      "\" se usa con mas de un tipo de dato. Corrige los bloques marcados con ! antes de subir.",
+      "err"
+    );
+    return;
+  }
 
+  if (typeof keepReadingSerial !== "undefined" && keepReadingSerial) { 
+    detenerMonitor(); 
+  }
+
+  var modelo = document.getElementById("espModel").value;
+  var btn = document.getElementById("btnSubir");
+  var originalText = btn.innerHTML;
+  
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Iniciando...';
+
+  var nombreModelo = (MODELOS && MODELOS[modelo]) ? MODELOS[modelo].name : modelo;
+  showStatus("Iniciando subida a " + nombreModelo + "...", "info");
+  
+  var panelLog = document.getElementById("compileLogPanel");
+  if (panelLog) panelLog.style.display = "block";
+  var areaLog = document.getElementById("compileLogArea");
+  if (areaLog) areaLog.value = "";
+
+  try {
+    // 1. CONEXIÓN VÍA WEB SERIAL
+    if (!loader) {
+      appendLog(">> Solicitando puerto COM al usuario...");
+      port = await navigator.serial.requestPort();
+      
+      const { ESPLoader, Transport } = await import("https://unpkg.com/esptool-js/bundle.js");
+      transport = new Transport(port);
+      loader = new ESPLoader({
+        transport: transport,
+        baudrate: 115200,
+        terminal: {
+          writeLine: (msg) => appendLog(msg),
+          write: (msg) => appendLog(msg),
+          clean: () => {},
+          clear: () => {}
+        }
+      });
+
+      appendLog(">> Conectando con el chip ESP32...");
+      await loader.main();
+      appendLog(">> ESP32 Conectado con éxito.");
+      if (typeof actualizarIndicadorConexion === "function") {
+        actualizarIndicadorConexion(true, await describirPuerto(port));
+      }
+    }
+
+    // 2. PETICIÓN DE COMPILACIÓN A RENDER
+    btn.innerHTML = '<span class="spinner"></span>Compilando en la nube...';
+    showStatus("Compilando código C++ en Render...", "info");
+    appendLog(">> Enviando código C++ al servidor de compilación...");
+
+    var boardKey = (typeof MODELO_A_BOARD !== "undefined" && MODELO_A_BOARD[modelo]) 
+      ? MODELO_A_BOARD[modelo] 
+      : modelo;
+
+    var response = await fetch(COMPILER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: code,
+        board: boardKey
+      })
+    });
+
+    // Control de errores de red o servidor seguro
+    if (!response.ok) {
+      var errorMsg = "Error en el servidor de compilación (" + response.status + ")";
+      try {
+        var errData = await response.json();
+        if (errData && errData.error) errorMsg = errData.error;
+      } catch (e) {
+        var errText = await response.text();
+        if (errText) errorMsg = errText;
+      }
+      throw new Error(errorMsg);
+    }
+
+    appendLog(">> Compilado exitosamente. Recibiendo binario...");
+    var buffer = await response.arrayBuffer();
+    var binaryData = new Uint8Array(buffer);
+
+    // 3. DETERMINAR DIRECCIÓN DE MEMORIA
+    let flashAddress = 0x10000; // ESP32 Estándar y S3 por defecto
+    if (modelo.includes("c3") || modelo.includes("c6")) {
+      flashAddress = 0x0;     // ESP32-C3 / C6
+    }
+
+    appendLog(">> Preparando flasheo en dirección: 0x" + flashAddress.toString(16));
+
+    // Convertir Uint8Array a String binario compatible con esptool-js
+    let binaryString = "";
+    for (let i = 0; i < binaryData.length; i++) {
+      binaryString += String.fromCharCode(binaryData[i]);
+    }
+
+    var fileArray = [{
+      data: binaryString,
+      address: flashAddress
+    }];
+
+    // 4. GRABAR EN LA TARJETA
+    btn.innerHTML = '<span class="spinner"></span>Escribiendo en ESP32...';
+    await loader.writeFlash({
+      fileArray: fileArray,
+      flashSize: "keep",
+      eraseAll: false,
+      compress: true
+    });
+
+    appendLog(">> ¡Carga completada con éxito!");
+    showStatus("Subida exitosa a " + nombreModelo + "!", "ok");
+
+  } catch (err) {
+    console.error(err);
+    appendLog(">> ERROR: " + err.message);
+    showStatus("Error: " + err.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}  
+<!--
 async function subirAAduino() {
   var code = generarCodigo();
   if (!code) return;
@@ -3406,7 +3545,7 @@ async function subirAAduino() {
     btn.innerHTML = originalText;
   }
 }
-
+-->
 async function cancelarSubida() {
   try {
     // Si la conexión Web Serial sigue activa, la desconectamos
