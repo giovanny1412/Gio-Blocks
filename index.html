@@ -3358,11 +3358,14 @@ async function subirAAduino() {
     btn.innerHTML = '<span class="spinner"></span>Compilando en la nube...';
     showStatus("Compilando código C++ en Render...", "info");
     appendLog(">> Enviando código C++ al servidor de compilación...");
-
+    var payload = {
+      code: code,
+      board: modelo // Envia 'esp32', 'esp32s3', 'esp32c3', etc.
+    };
     var response = await fetch(COMPILER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -3374,22 +3377,27 @@ async function subirAAduino() {
     var buffer = await response.arrayBuffer();
     var binaryData = new Uint8Array(buffer);
 
-    // 3. FLASHEO DIRECTO EN LA MEMORIA FLASH DEL ESP32
-    btn.innerHTML = '<span class="spinner"></span>Escribiendo Flash...';
-    showStatus("Flasheando programa en el ESP32...", "info");
-    appendLog(">> Escribiendo programa en el ESP32...");
+    let flashAddress = 0x10000; // Por defecto para ESP32 clásico y ESP32-S3
+    if (modelo === "esp32c3" || modelo === "esp32c6") {
+      flashAddress = 0x0;     // Para variantes C3 y C6
+    }
+
+    appendLog(">> Preparando flasheo en dirección: 0x" + flashAddress.toString(16));
 
     var fileArray = [{
       data: loader.ui8ToBstr(binaryData),
-      address: 0x10000 // Offset estándar para aplicación principal ESP32
+      address: flashAddress
     }];
 
+    // 2. Grabar en el ESP32
     await loader.writeFlash({
       fileArray: fileArray,
       flashSize: "keep",
       eraseAll: false,
       compress: true
     });
+
+    
 
     // 4. FINALIZACIÓN EXITOSA
     appendLog(">> ¡Carga completada con éxito!");
@@ -3405,13 +3413,27 @@ async function subirAAduino() {
 }
 
 async function cancelarSubida() {
-  if (!uploadJobId) return;
   try {
-    await fetch("http://localhost:5000/upload/cancel/" + uploadJobId, {method: "POST"});
+    // Si la conexión Web Serial sigue activa, la desconectamos
+    if (transport) {
+      await transport.disconnect();
+      loader = null;
+      transport = null;
+      port = null;
+    }
+
+    var btn = document.getElementById("btnSubir");
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = 'Subir a ESP32';
+    }
+
     document.getElementById("btnCancelar").disabled = true;
-    showStatus("Cancelando subida...", "info");
+    appendLog(">> Proceso cancelado y puerto desconectado.");
+    showStatus("Subida cancelada por el usuario.", "info");
+
   } catch (e) {
-    showStatus("Error al cancelar.", "err");
+    showStatus("Error al cancelar la conexión.", "err");
   }
 }
 
@@ -3488,27 +3510,80 @@ function showStatus(msg, type) {
 }
 
 // ========== MONITOR SERIAL ==========
-var eventSource = null;
-var serialLines = [];
-var maxSerialLines = 500;
 
-function iniciarMonitor() {
-  if (eventSource) { showStatus("El monitor ya esta activo.", "info"); return; }
-  var baud = document.getElementById("serialBaud").value;
-  fetch("http://localhost:5000/serial/start", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({baud: parseInt(baud)})
-  })
-  .then(function(res) { return res.json(); })
-  .then(function(data) {
-    if (data.success) {
-      conectarSSE();
-      document.getElementById("serialStatus").classList.add("active");
-      showStatus(data.message, "ok");
-    } else { showStatus(data.message, "err"); }
-  })
-  .catch(function(err) { showStatus("Error al iniciar monitor: " + err.message, "err"); });
+
+// Variable global para la lectura en tiempo real del monitor
+let serialReader = null;
+let keepReadingSerial = false;
+
+async function iniciarMonitor() {
+  if (keepReadingSerial) {
+    showStatus("El monitor ya esta activo.", "info");
+    return;
+  }
+
+  var baud = parseInt(document.getElementById("serialBaud").value) || 115200;
+
+  try {
+    // Si no se ha solicitado el puerto aún, pedirlo
+    if (!port) {
+      port = await navigator.serial.requestPort();
+    }
+
+    // Abrir la conexión serie si no está abierta
+    if (!port.readable) {
+      await port.open({ baudRate: baud });
+    }
+
+    keepReadingSerial = true;
+    document.getElementById("serialStatus").classList.add("active");
+    showStatus("Monitor serial iniciado a " + baud + " baudios.", "ok");
+
+    // Iniciar bucle de lectura continua
+    leerDatosSerial();
+
+  } catch (err) {
+    showStatus("Error al iniciar monitor: " + err.message, "err");
+  }
+}
+
+async function leerDatosSerial() {
+  const textDecoder = new TextDecoderStream();
+  const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+  serialReader = textDecoder.readable.getReader();
+
+  var monitorArea = document.getElementById("serialOutput"); // Asegúrate de que este ID coincida con tu textarea/log del monitor
+
+  try {
+    while (keepReadingSerial) {
+      const { value, done } = await serialReader.read();
+      if (done) {
+        break;
+      }
+      if (value && monitorArea) {
+        monitorArea.value += value;
+        monitorArea.scrollTop = monitorArea.scrollHeight;
+      }
+    }
+  } catch (error) {
+    console.error("Error leyendo del puerto serial:", error);
+  } finally {
+    serialReader.releaseLock();
+  }
+}
+
+async function detenerMonitor() {
+  keepReadingSerial = false;
+
+  if (serialReader) {
+    try {
+      await serialReader.cancel();
+      serialReader = null;
+    } catch (e) {}
+  }
+
+  document.getElementById("serialStatus").classList.remove("active");
+  showStatus("Monitor serial detenido.", "info");
 }
 
 function conectarSSE() {
@@ -3521,16 +3596,7 @@ function conectarSSE() {
   };
 }
 
-function detenerMonitor() {
-  if (eventSource) { eventSource.close(); eventSource = null; }
-  fetch("http://localhost:5000/serial/stop", {method: "POST"})
-  .then(function(res) { return res.json(); })
-  .then(function(data) {
-    document.getElementById("serialStatus").classList.remove("active");
-    showStatus(data.message, "info");
-  })
-  .catch(function(err) { showStatus("Error al detener: " + err.message, "err"); });
-}
+
 
 function limpiarMonitor() {
   serialLines = [];
