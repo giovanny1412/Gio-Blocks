@@ -3341,8 +3341,13 @@ async function subirAAduino() {
       loader = new ESPLoader({
         transport: transport,
         baudrate: 115200,
-        terminal: { writeLine: (msg) => appendLog(msg) }
-      });
+        terminal: {
+          writeLine: (msg) => appendLog(msg),
+          write: (msg) => appendLog(msg),
+          clean: () => {}, // Función vacía para evitar que falle al intentar limpiar
+          clear: () => {}
+      }
+    });
 
       appendLog(">> Conectando con el chip ESP32...");
       await loader.main();
