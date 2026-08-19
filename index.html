@@ -3317,7 +3317,7 @@ async function subirAAduino() {
     return;
   }
 
-  if (eventSource) { detenerMonitor(); }
+  if (keepReadingSerial) { detenerMonitor(); }
 
   var modelo = document.getElementById("espModel").value;
   var btn = document.getElementById("btnSubir");
@@ -3586,15 +3586,7 @@ async function detenerMonitor() {
   showStatus("Monitor serial detenido.", "info");
 }
 
-function conectarSSE() {
-  eventSource = new EventSource("http://localhost:5000/serial/stream");
-  eventSource.onmessage = function(e) {
-    agregarLineaSerial(e.data);
-  };
-  eventSource.onerror = function() {
-    document.getElementById("serialStatus").classList.remove("active");
-  };
-}
+
 
 
 
