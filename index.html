@@ -64,9 +64,6 @@ input[type="file"]{display:none;}
 #compileLogArea::-webkit-scrollbar{width:8px;}#compileLogArea::-webkit-scrollbar-thumb{background:#444;border-radius:4px;}
 .btn-cancelar{background:#dc3545;color:white;}
 .btn-cancelar:disabled{background:#6c757d;cursor:not-allowed;}
-
-.btn-limpiar{background:#e74c3c;color:white;}
-.btn-limpiar:hover{background:#c0392b;}
 </style>
 <base target="_blank">
 <base target="_blank">
@@ -88,12 +85,8 @@ input[type="file"]{display:none;}
   <span class="model-info" id="modelInfo">WiFi + BT Classic + BLE | 34 GPIOs | 2x DAC (GPIO25,26)</span>
   <div class="conn-indicator" id="connIndicator">
     <div class="conn-dot" id="connDot"></div>
-    <span class="conn-info" id="connText">Buscando...</span>
+    <span class="conn-info" id="connText">Sin conexión</span>
     <span class="conn-port" id="connPort"></span>
-    <select id="manualPort" style="display:none;padding:4px 8px;border-radius:4px;border:1px solid #ccc;font-size:12px;">
-      <option value="">-- Puerto --</option>
-    </select>
-    <a id="downloadAgentBtn" href="descargas.html" style="display:none;margin-left:8px;padding:4px 10px;background:#2563eb;color:#fff;border-radius:4px;font-size:12px;text-decoration:none;white-space:nowrap;">⬇ Descargar agente</a>
   </div>
 </div>
 <div class="main-container">
@@ -121,8 +114,7 @@ input[type="file"]{display:none;}
 <button class="btn-generar" onclick="generarCodigo()">Generar Codigo</button>
 <button class="btn-descargar" onclick="descargarCodigo()">Descargar .ino</button>
 <button class="btn-subir" id="btnSubir" onclick="subirAAduino()">Subir a ESP32</button>
-<button class="btn-limpiar" onclick="limpiarEspacio()" title="Libera espacio de compilaciones y temporales">Limpiar Espacio</button>
-<span class="hint">Conecta el ESP32 y ejecuta el agente</span>
+<span class="hint">Conecta el ESP32 por USB y presiona "Subir a ESP32"</span>
 </div>
 <div id="statusArea"></div>
 <div class="compile-log-panel" id="compileLogPanel" style="display:none;">
@@ -3282,9 +3274,6 @@ function descargarCodigo() {
 
 var MODELO_A_BOARD = { dev: "esp32", s3: "esp32s3", c3: "esp32c3", c6: "esp32c6" };
 
-var uploadJobId = null;
-var uploadPollInterval = null;
-
 // Constante con la URL de tu backend en Render
 const COMPILER_URL = "https://server-ep0v.onrender.com/compile";
 
@@ -3352,6 +3341,7 @@ async function subirAAduino() {
       appendLog(">> Conectando con el chip ESP32...");
       await loader.main();
       appendLog(">> ESP32 Conectado con éxito.");
+      actualizarIndicadorConexion(true, await describirPuerto(port));
     }
 
     // 2. PETICIÓN DE COMPILACIÓN A RENDER
@@ -3426,6 +3416,7 @@ async function cancelarSubida() {
       transport = null;
       port = null;
     }
+    actualizarIndicadorConexion(false);
 
     var btn = document.getElementById("btnSubir");
     if (btn) {
@@ -3442,67 +3433,36 @@ async function cancelarSubida() {
   }
 }
 
-// ========== INDICADOR DE CONEXION ==========
-var connPollInterval = null;
+// ========== INDICADOR DE CONEXION (Web Serial, sin agente local) ==========
+// El estado real de la conexión lo da el propio navegador (navigator.serial),
+// así que el indicador simplemente refleja si ya hay un puerto/transport abierto.
+function actualizarIndicadorConexion(conectado, detalle) {
+  var dot = document.getElementById("connDot");
+  var text = document.getElementById("connText");
+  var portSpan = document.getElementById("connPort");
+  if (!dot || !text || !portSpan) return;
 
-function iniciarMonitoreoConexion() {
-  actualizarConexion();
-  if (connPollInterval) clearInterval(connPollInterval);
-  connPollInterval = setInterval(actualizarConexion, 3000);
-}
-
-async function actualizarConexion() {
-  try {
-    var res = await fetch("http://localhost:5000/status");
-    var data = await res.json();
-    var dot = document.getElementById("connDot");
-    var text = document.getElementById("connText");
-    var portSpan = document.getElementById("connPort");
-    var manualSelect = document.getElementById("manualPort");
-    document.getElementById("downloadAgentBtn").style.display = "none";
-
-    if (data.detected_port) {
-      dot.classList.add("connected");
-      text.textContent = "Conectado";
-      portSpan.textContent = data.detected_port;
-    } else if (data.ports && data.ports.length > 0) {
-      dot.classList.remove("connected");
-      text.textContent = "Puertos detectados";
-      portSpan.textContent = data.ports.length + " disponibles";
-    } else {
-      dot.classList.remove("connected");
-      text.textContent = "Sin dispositivo";
-      portSpan.textContent = "";
-    }
-
-    // Actualizar dropdown de puertos manuales
-    var currentVal = manualSelect.value;
-    manualSelect.innerHTML = '<option value="">-- Puerto --</option>';
-    if (data.ports && data.ports.length > 0) {
-      manualSelect.style.display = "inline-block";
-      data.ports.forEach(function(p) {
-        var opt = document.createElement("option");
-        opt.value = p.device;
-        opt.textContent = p.device + " (" + (p.description || "?").substring(0, 20) + ")";
-        if (p.device === currentVal) opt.selected = true;
-        manualSelect.appendChild(opt);
-      });
-    } else {
-      manualSelect.style.display = "none";
-    }
-  } catch (e) {
-    var dot = document.getElementById("connDot");
-    var text = document.getElementById("connText");
+  if (conectado) {
+    dot.classList.add("connected");
+    text.textContent = "Conectado";
+    portSpan.textContent = detalle || "";
+  } else {
     dot.classList.remove("connected");
-    text.textContent = "Agente offline";
-    document.getElementById("connPort").textContent = "";
-    document.getElementById("manualPort").style.display = "none";
-    document.getElementById("downloadAgentBtn").style.display = "inline-block";
+    text.textContent = "Sin conexión";
+    portSpan.textContent = "";
   }
 }
 
-// Iniciar monitoreo al cargar
-iniciarMonitoreoConexion();
+async function describirPuerto(p) {
+  try {
+    var info = p.getInfo ? p.getInfo() : {};
+    if (info.usbVendorId) {
+      return "VID:" + info.usbVendorId.toString(16).toUpperCase() +
+             " PID:" + (info.usbProductId || 0).toString(16).toUpperCase();
+    }
+  } catch (e) {}
+  return "USB serie";
+}
 
 
 function showStatus(msg, type) {
@@ -3543,6 +3503,7 @@ async function iniciarMonitor() {
     keepReadingSerial = true;
     document.getElementById("serialStatus").classList.add("active");
     showStatus("Monitor serial iniciado a " + baud + " baudios.", "ok");
+    actualizarIndicadorConexion(true, await describirPuerto(port));
 
     // Iniciar bucle de lectura continua
     leerDatosSerial();
@@ -3639,20 +3600,6 @@ workspace.addChangeListener(function(event) {
   }, 300);
 });
 
-async function limpiarEspacio() {
-  try {
-    showStatus("Limpiando espacio en disco...", "info");
-    var res = await fetch("http://localhost:5000/clean", {method: "POST"});
-    var data = await res.json();
-    if (data.success && data.actions) {
-      showStatus("Espacio liberado: " + data.actions.join(" | "), "ok");
-    } else {
-      showStatus("No se pudo limpiar el espacio.", "err");
-    }
-  } catch (err) {
-    showStatus("Error al limpiar: " + err.message, "err");
-  }
-}
 </script>
 </body>
 </html>
