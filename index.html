@@ -3337,7 +3337,7 @@ async function subirAAduino() {
       transport = new Transport(port);
       loader = new ESPLoader({
         transport: transport,
-        baudrate: 115200,
+        baudrate: 460800,
         terminal: {
           writeLine: (msg) => appendLog(msg),
           write: (msg) => appendLog(msg),
@@ -3414,7 +3414,7 @@ async function subirAAduino() {
       fileArray: fileArray,
       flashSize: "keep",
       eraseAll: false,
-      compress: true
+      compress: false
     });
 
     appendLog(">> ¡Carga completada con éxito!");
