@@ -3285,9 +3285,27 @@ var MODELO_A_BOARD = { dev: "esp32", s3: "esp32s3", c3: "esp32c3", c6: "esp32c6"
 var uploadJobId = null;
 var uploadPollInterval = null;
 
+// Constante con la URL de tu backend en Render
+const COMPILER_URL = "https://server-ep0v.onrender.com/compile";
+
+// Variables globales para Web Serial
+let port;
+let transport;
+let loader;
+
+// Helper para mostrar logs en la consola visual del usuario
+function appendLog(mensaje) {
+  var logArea = document.getElementById("compileLogArea");
+  if (logArea) {
+    logArea.value += mensaje + "\n";
+    logArea.scrollTop = logArea.scrollHeight;
+  }
+}
+
 async function subirAAduino() {
   var code = generarCodigo();
   if (!code) return;
+  
   var conflicts = Arduino.varTypeConflicts_ || {};
   var conflictNames = Object.keys(conflicts);
   if (conflictNames.length > 0) {
@@ -3298,105 +3316,87 @@ async function subirAAduino() {
     );
     return;
   }
-  // El agente detiene el monitor serial del lado del servidor antes de
-  // subir (necesita el puerto libre). Lo cerramos aqui tambien en el
-  // navegador para que el indicador ("Monitor activo") no quede encendido
-  // engañosamente mientras se sube el codigo.
+
   if (eventSource) { detenerMonitor(); }
 
   var modelo = document.getElementById("espModel").value;
-  var boardKey = MODELO_A_BOARD[modelo] || "esp32";
   var btn = document.getElementById("btnSubir");
   var originalText = btn.innerHTML;
+  
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Iniciando...';
-
-  // Obtener puerto seleccionado manualmente si existe
-  var manualPort = document.getElementById("manualPort").value;
 
   showStatus("Iniciando subida a " + MODELOS[modelo].name + "...", "info");
   document.getElementById("compileLogPanel").style.display = "block";
   document.getElementById("compileLogArea").value = "";
-  document.getElementById("btnCancelar").disabled = false;
 
   try {
-    var payload = {code: code, board: boardKey};
-    if (manualPort) payload.port = manualPort;
+    // 1. CONEXIÓN VÍA WEB SERIAL (Pide puerto COM en el navegador si no está conectado)
+    if (!loader) {
+      appendLog(">> Solicitando puerto COM al usuario...");
+      port = await navigator.serial.requestPort();
+      
+      const { ESPLoader, Transport } = await import("https://unpkg.com/esptool-js/bundle.js");
+      transport = new Transport(port);
+      loader = new ESPLoader({
+        transport: transport,
+        baudrate: 115200,
+        terminal: { writeLine: (msg) => appendLog(msg) }
+      });
 
-    var response = await fetch("http://localhost:5000/upload", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload)
-    });
-    var result = await response.json();
-    if (result.success && result.job_id) {
-      uploadJobId = result.job_id;
-      btn.innerHTML = '<span class="spinner"></span>Subiendo...';
-      showStatus("Subida en progreso. ID: " + uploadJobId, "info");
-      iniciarPollingSubida();
-    } else {
-      showStatus(result.error || "Error iniciando subida.", "err");
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      document.getElementById("btnCancelar").disabled = true;
+      appendLog(">> Conectando con el chip ESP32...");
+      await loader.main();
+      appendLog(">> ESP32 Conectado con éxito.");
     }
+
+    // 2. PETICIÓN DE COMPILACIÓN A RENDER
+    btn.innerHTML = '<span class="spinner"></span>Compilando en la nube...';
+    showStatus("Compilando código C++ en Render...", "info");
+    appendLog(">> Enviando código C++ al servidor de compilación...");
+
+    var response = await fetch(COMPILER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code })
+    });
+
+    if (!response.ok) {
+      var errData = await response.json();
+      throw new Error(errData.error || "Error durante la compilación en Render.");
+    }
+
+    appendLog(">> Compilado exitosamente. Descargando binario...");
+    var buffer = await response.arrayBuffer();
+    var binaryData = new Uint8Array(buffer);
+
+    // 3. FLASHEO DIRECTO EN LA MEMORIA FLASH DEL ESP32
+    btn.innerHTML = '<span class="spinner"></span>Escribiendo Flash...';
+    showStatus("Flasheando programa en el ESP32...", "info");
+    appendLog(">> Escribiendo programa en el ESP32...");
+
+    var fileArray = [{
+      data: loader.ui8ToBstr(binaryData),
+      address: 0x10000 // Offset estándar para aplicación principal ESP32
+    }];
+
+    await loader.writeFlash({
+      fileArray: fileArray,
+      flashSize: "keep",
+      eraseAll: false,
+      compress: true
+    });
+
+    // 4. FINALIZACIÓN EXITOSA
+    appendLog(">> ¡Carga completada con éxito!");
+    showStatus("Subida exitosa a " + MODELOS[modelo].name + "!", "ok");
+
   } catch (err) {
-    showStatus("No se pudo conectar con el agente local. Verifica que este ejecutandose.", "err");
+    appendLog(">> ERROR: " + err.message);
+    showStatus("Error: " + err.message, "err");
+  } finally {
     btn.disabled = false;
     btn.innerHTML = originalText;
-    document.getElementById("btnCancelar").disabled = true;
   }
-}
-
-function iniciarPollingSubida() {
-  if (uploadPollInterval) clearInterval(uploadPollInterval);
-  uploadPollInterval = setInterval(pollUploadStatus, 800);
-}
-
-async function pollUploadStatus() {
-  if (!uploadJobId) return;
-  try {
-    var res = await fetch("http://localhost:5000/upload/status/" + uploadJobId);
-    var data = await res.json();
-    if (!data.success) return;
-
-    // Actualizar logs
-    var logArea = document.getElementById("compileLogArea");
-    var newLogs = data.logs.join("\n");
-    if (logArea.value !== newLogs) {
-      logArea.value = newLogs;
-      logArea.scrollTop = logArea.scrollHeight;
-    }
-
-    var btn = document.getElementById("btnSubir");
-    var status = data.status;
-
-    if (status === "success") {
-      clearInterval(uploadPollInterval);
-      uploadPollInterval = null;
-      uploadJobId = null;
-      btn.disabled = false;
-      btn.innerHTML = 'Subir a ESP32';
-      document.getElementById("btnCancelar").disabled = true;
-      showStatus("Subida exitosa a " + data.board + " en puerto " + data.port + "!", "ok");
-    } else if (status === "error") {
-      clearInterval(uploadPollInterval);
-      uploadPollInterval = null;
-      uploadJobId = null;
-      btn.disabled = false;
-      btn.innerHTML = 'Subir a ESP32';
-      document.getElementById("btnCancelar").disabled = true;
-      showStatus("Error: " + (data.error || "Revisa el log de compilacion."), "err");
-    } else if (status === "cancelled") {
-      clearInterval(uploadPollInterval);
-      uploadPollInterval = null;
-      uploadJobId = null;
-      btn.disabled = false;
-      btn.innerHTML = 'Subir a ESP32';
-      document.getElementById("btnCancelar").disabled = true;
-      showStatus("Subida cancelada por el usuario.", "info");
-    }
-  } catch (e) {}
 }
 
 async function cancelarSubida() {
