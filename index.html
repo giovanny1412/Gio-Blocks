@@ -3355,7 +3355,7 @@ async function subirAAduino() {
     }
     var payload = {
       code: code,
-      board: modelo // Envia 'esp32', 'esp32s3', 'esp32c3', etc.
+      board: MODELO_A_BOARD[modelo] || modelo // Traduce 'c3' -> 'esp32c3', etc.
     };
     var response = await fetch(COMPILER_URL, {
       method: "POST",
