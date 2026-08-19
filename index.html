@@ -3358,6 +3358,11 @@ async function subirAAduino() {
     btn.innerHTML = '<span class="spinner"></span>Compilando en la nube...';
     showStatus("Compilando código C++ en Render...", "info");
     appendLog(">> Enviando código C++ al servidor de compilación...");
+    var code = Blockly.Arduino ? Blockly.Arduino.workspaceToCode(workspace) : generarCodigo();
+    if (!code) {
+      showStatus("Error: El área de trabajo está vacía.", "err");
+      return;
+    }
     var payload = {
       code: code,
       board: modelo // Envia 'esp32', 'esp32s3', 'esp32c3', etc.
