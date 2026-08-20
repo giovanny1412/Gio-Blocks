@@ -3402,11 +3402,12 @@ async function subirAAduino() {
     for (let i = 0; i < binaryData.length; i++) {
       binaryString += String.fromCharCode(binaryData[i]);
     }
-
-    var fileArray = [{
-      data: binaryString,
-      address: flashAddress
-    }];
+    var fileArray = [
+      { data: bootloaderString, address: modelo.includes("c3") || modelo.includes("c6") ? 0x0 : 0x1000 },
+      { data: partitionsString, address: 0x8000 },
+      { data: appString,        address: 0x10000 }
+    ]; 
+    
 
     // 4. GRABAR EN LA TARJETA
     btn.innerHTML = '<span class="spinner"></span>Escribiendo en ESP32...';
