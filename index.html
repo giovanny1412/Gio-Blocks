@@ -3385,25 +3385,28 @@ async function subirAAduino() {
       throw new Error(errorMsg);
     }
 
-    appendLog(">> Compilado exitosamente. Recibiendo binarios...");
-    var compileResult = await response.json();
-    if (!compileResult || !compileResult.success || !Array.isArray(compileResult.files)) {
-      throw new Error(compileResult && compileResult.error ? compileResult.error : "Respuesta de compilación inválida.");
+    appendLog(">> Compilado exitosamente. Recibiendo binario...");
+    var buffer = await response.arrayBuffer();
+    var binaryData = new Uint8Array(buffer);
+
+    // 3. DETERMINAR DIRECCIÓN DE MEMORIA
+    let flashAddress = 0x10000; // ESP32 Estándar y S3 por defecto
+    if (modelo.includes("c3") || modelo.includes("c6")) {
+      flashAddress = 0x0;     // ESP32-C3 / C6
     }
 
-    // Convierte una cadena base64 a "binary string" (cada char = 1 byte), formato que espera esptool-js
-    function base64ToBinaryString(b64) {
-      var raw = atob(b64);
-      return raw; // atob ya devuelve un binary string de 1 byte por char
+    appendLog(">> Preparando flasheo en dirección: 0x" + flashAddress.toString(16));
+
+    // Convertir Uint8Array a String binario compatible con esptool-js
+    let binaryString = "";
+    for (let i = 0; i < binaryData.length; i++) {
+      binaryString += String.fromCharCode(binaryData[i]);
     }
 
-    var fileArray = compileResult.files.map(function (f) {
-      appendLog(">> Preparando " + f.name + " en dirección: 0x" + f.address.toString(16));
-      return {
-        data: base64ToBinaryString(f.data),
-        address: f.address
-      };
-    });
+    var fileArray = [{
+      data: binaryString,
+      address: flashAddress
+    }];
 
     // 4. GRABAR EN LA TARJETA
     btn.innerHTML = '<span class="spinner"></span>Escribiendo en ESP32...';
