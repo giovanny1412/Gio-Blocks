@@ -3290,68 +3290,82 @@ function appendLog(mensaje) {
     logArea.scrollTop = logArea.scrollHeight;
   }
 }
+// Helper: Base64 → Uint8Array (esptool-js requiere bytes, no string)
+function base64ToUint8Array(base64) {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
 async function subirAAduino() {
   var code = Blockly.Arduino ? Blockly.Arduino.workspaceToCode(workspace) : generarCodigo();
   if (!code) {
     showStatus("Error: El área de trabajo está vacía.", "err");
     return;
   }
-  
+
   var conflicts = Arduino.varTypeConflicts_ || {};
   var conflictNames = Object.keys(conflicts);
   if (conflictNames.length > 0) {
     showStatus(
-      "No se puede subir: la variable \"" + conflictNames.join('", "') +
-      "\" se usa con mas de un tipo de dato. Corrige los bloques marcados con ! antes de subir.",
+      'No se puede subir: la variable "' + conflictNames.join('", "') +
+      '" se usa con mas de un tipo de dato. Corrige los bloques marcados con ! antes de subir.',
       "err"
     );
     return;
   }
 
-  if (typeof keepReadingSerial !== "undefined" && keepReadingSerial) { 
-    detenerMonitor(); 
+  if (typeof keepReadingSerial !== "undefined" && keepReadingSerial) {
+    detenerMonitor();
   }
 
   var modelo = document.getElementById("espModel").value;
   var btn = document.getElementById("btnSubir");
   var originalText = btn.innerHTML;
-  
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Iniciando...';
 
   var nombreModelo = (MODELOS && MODELOS[modelo]) ? MODELOS[modelo].name : modelo;
   showStatus("Iniciando subida a " + nombreModelo + "...", "info");
-  
+
   var panelLog = document.getElementById("compileLogPanel");
   if (panelLog) panelLog.style.display = "block";
   var areaLog = document.getElementById("compileLogArea");
   if (areaLog) areaLog.value = "";
 
+  // Si hay una conexión anterior rota, la limpiamos
+  if (loader && transport) {
+    try { await transport.disconnect(); } catch (e) {}
+    loader = null; transport = null; port = null;
+  }
+
   try {
     // 1. CONEXIÓN VÍA WEB SERIAL
-    if (!loader) {
-      appendLog(">> Solicitando puerto COM al usuario...");
-      port = await navigator.serial.requestPort();
-      
-      const { ESPLoader, Transport } = await import("https://unpkg.com/esptool-js/bundle.js");
-      transport = new Transport(port);
-      loader = new ESPLoader({
-        transport: transport,
-        baudrate: 460800,
-        terminal: {
-          writeLine: (msg) => appendLog(msg),
-          write: (msg) => appendLog(msg),
-          clean: () => {},
-          clear: () => {}
-        }
-      });
+    appendLog(">> Solicitando puerto COM al usuario...");
+    port = await navigator.serial.requestPort();
 
-      appendLog(">> Conectando con el chip ESP32...");
-      await loader.main();
-      appendLog(">> ESP32 Conectado con éxito.");
-      if (typeof actualizarIndicadorConexion === "function") {
-        actualizarIndicadorConexion(true, await describirPuerto(port));
+    const { ESPLoader, Transport } = await import("https://unpkg.com/esptool-js/bundle.js");
+    transport = new Transport(port);
+    loader = new ESPLoader({
+      transport: transport,
+      baudrate: 460800,
+      terminal: {
+        writeLine: (msg) => appendLog(msg),
+        write: (msg) => appendLog(msg),
+        clean: () => {},
+        clear: () => {}
       }
+    });
+
+    appendLog(">> Conectando con el chip ESP32...");
+    await loader.main();
+    appendLog(">> ESP32 Conectado con éxito.");
+    if (typeof actualizarIndicadorConexion === "function") {
+      actualizarIndicadorConexion(true, await describirPuerto(port));
     }
 
     // 2. PETICIÓN DE COMPILACIÓN A RENDER
@@ -3359,20 +3373,16 @@ async function subirAAduino() {
     showStatus("Compilando código C++ en Render...", "info");
     appendLog(">> Enviando código C++ al servidor de compilación...");
 
-    var boardKey = (typeof MODELO_A_BOARD !== "undefined" && MODELO_A_BOARD[modelo]) 
-      ? MODELO_A_BOARD[modelo] 
+    var boardKey = (typeof MODELO_A_BOARD !== "undefined" && MODELO_A_BOARD[modelo])
+      ? MODELO_A_BOARD[modelo]
       : modelo;
 
     var response = await fetch(COMPILER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code: code,
-        board: boardKey
-      })
+      body: JSON.stringify({ code: code, board: boardKey })
     });
 
-    // Control de errores de red o servidor
     if (!response.ok) {
       var errorMsg = "Error en el servidor de compilación (" + response.status + ")";
       try {
@@ -3385,22 +3395,26 @@ async function subirAAduino() {
       throw new Error(errorMsg);
     }
 
-    // 3. PROCESAR RESPUESTA Y CONSTRUIR FILEARRAY CON TODOS LOS BINARIOS
     appendLog(">> Compilado exitosamente. Recibiendo archivos binarios...");
     var jsonResponse = await response.json();
 
-    if (!jsonResponse.success || !jsonResponse.files) {
+    if (!jsonResponse.success || !jsonResponse.files || jsonResponse.files.length === 0) {
       throw new Error(jsonResponse.error || "No se recibieron los archivos compilados del servidor.");
     }
 
     var modeloLower = modelo.toLowerCase();
 
-    var fileArray = jsonResponse.files.map(function(file) {
-      var address = 0x10000; // Dirección por defecto para la App ('app')
+    // 3. CONSTRUIR FILEARRAY CON DIRECCIONES CORRECTAS Y Uint8Array
+    var fileMap = {}; // Usamos un mapa para ordenar luego por dirección
+
+    jsonResponse.files.forEach(function(file) {
+      var address = 0x10000; // App por defecto
 
       if (file.type === 'bootloader') {
-        // C3 y C6 llevan el bootloader en 0x0; ESP32 estándar y S3 en 0x1000
-        address = (modeloLower.includes("c3") || modeloLower.includes("c6")) ? 0x0 : 0x1000;
+        // CORRECCIÓN CRÍTICA: S3, C3 y C6 usan 0x0. Solo ESP32 clásico usa 0x1000.
+        address = (modeloLower.includes("s3") || modeloLower.includes("c3") || modeloLower.includes("c6"))
+          ? 0x0
+          : 0x1000;
       } else if (file.type === 'partitions') {
         address = 0x8000;
       } else if (file.type === 'boot_app0') {
@@ -3409,11 +3423,16 @@ async function subirAAduino() {
 
       appendLog(">> Preparando " + file.type + " en dirección: 0x" + address.toString(16));
 
-      return {
-        data: atob(file.data), // Decodificar Base64 a string binario para esptool-js
+      fileMap[address] = {
+        data: base64ToUint8Array(file.data), // CORRECCIÓN CRÍTICA: Uint8Array, no string
         address: address
       };
     });
+
+    // Ordenar de menor a mayor dirección (bootloader → partitions → boot_app0 → app)
+    var fileArray = Object.keys(fileMap)
+      .sort(function(a, b) { return parseInt(a) - parseInt(b); })
+      .map(function(addr) { return fileMap[addr]; });
 
     // 4. GRABAR TODOS LOS BINARIOS EN LA TARJETA
     btn.innerHTML = '<span class="spinner"></span>Escribiendo en ESP32...';
@@ -3424,19 +3443,36 @@ async function subirAAduino() {
       compress: false
     });
 
-    appendLog(">> ¡Carga completada con éxito!");
-    showStatus("Subida exitosa a " + nombreModelo + "!", "ok");
+    appendLog(">> Escritura completada. Reiniciando ESP32...");
+
+    // 5. RESET DEL CHIP PARA QUE ARRANQUE EL NUEVO FIRMWARE
+    // CORRECCIÓN CRÍTICA: Sin esto, el ESP32 se queda en modo bootloader y no ejecuta tu código.
+    await transport.setDTR(false);
+    await new Promise(function(resolve) { setTimeout(resolve, 100); });
+    await transport.setRTS(false);
+    await new Promise(function(resolve) { setTimeout(resolve, 500); });
+
+    appendLog(">> ¡Carga completada con éxito! El ESP32 está reiniciando.");
+    showStatus("Subida exitosa a " + nombreModelo + "! Reiniciando...", "ok");
+
+    // Desconectamos limpiamente para que el monitor serial pueda reconectarse después
+    await transport.disconnect();
+    loader = null; transport = null; port = null;
+    actualizarIndicadorConexion(false);
 
   } catch (err) {
     console.error(err);
     appendLog(">> ERROR: " + err.message);
     showStatus("Error: " + err.message, "err");
+    // Limpiamos el estado para forzar reconexión la próxima vez
+    try { if (transport) await transport.disconnect(); } catch (e) {}
+    loader = null; transport = null; port = null;
+    actualizarIndicadorConexion(false);
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
-} 
-
+}
 
 
 async function cancelarSubida() {
