@@ -3372,7 +3372,7 @@ async function subirAAduino() {
       })
     });
 
-    // Control de errores de red o servidor seguro
+    // Control de errores de red o servidor
     if (!response.ok) {
       var errorMsg = "Error en el servidor de compilación (" + response.status + ")";
       try {
@@ -3385,31 +3385,37 @@ async function subirAAduino() {
       throw new Error(errorMsg);
     }
 
-    appendLog(">> Compilado exitosamente. Recibiendo binario...");
-    var buffer = await response.arrayBuffer();
-    var binaryData = new Uint8Array(buffer);
+    // 3. PROCESAR RESPUESTA Y CONSTRUIR FILEARRAY CON TODOS LOS BINARIOS
+    appendLog(">> Compilado exitosamente. Recibiendo archivos binarios...");
+    var jsonResponse = await response.json();
 
-    // 3. DETERMINAR DIRECCIÓN DE MEMORIA
-    let flashAddress = 0x10000; // ESP32 Estándar y S3 por defecto
-    if (modelo.includes("c3") || modelo.includes("c6")) {
-      flashAddress = 0x0;     // ESP32-C3 / C6
+    if (!jsonResponse.success || !jsonResponse.files) {
+      throw new Error(jsonResponse.error || "No se recibieron los archivos compilados del servidor.");
     }
 
-    appendLog(">> Preparando flasheo en dirección: 0x" + flashAddress.toString(16));
+    var modeloLower = modelo.toLowerCase();
 
-    // Convertir Uint8Array a String binario compatible con esptool-js
-    let binaryString = "";
-    for (let i = 0; i < binaryData.length; i++) {
-      binaryString += String.fromCharCode(binaryData[i]);
-    }
-    var fileArray = [
-      { data: bootloaderString, address: modelo.includes("c3") || modelo.includes("c6") ? 0x0 : 0x1000 },
-      { data: partitionsString, address: 0x8000 },
-      { data: appString,        address: 0x10000 }
-    ]; 
-    
+    var fileArray = jsonResponse.files.map(function(file) {
+      var address = 0x10000; // Dirección por defecto para la App ('app')
 
-    // 4. GRABAR EN LA TARJETA
+      if (file.type === 'bootloader') {
+        // C3 y C6 llevan el bootloader en 0x0; ESP32 estándar y S3 en 0x1000
+        address = (modeloLower.includes("c3") || modeloLower.includes("c6")) ? 0x0 : 0x1000;
+      } else if (file.type === 'partitions') {
+        address = 0x8000;
+      } else if (file.type === 'boot_app0') {
+        address = 0xe000;
+      }
+
+      appendLog(">> Preparando " + file.type + " en dirección: 0x" + address.toString(16));
+
+      return {
+        data: atob(file.data), // Decodificar Base64 a string binario para esptool-js
+        address: address
+      };
+    });
+
+    // 4. GRABAR TODOS LOS BINARIOS EN LA TARJETA
     btn.innerHTML = '<span class="spinner"></span>Escribiendo en ESP32...';
     await loader.writeFlash({
       fileArray: fileArray,
@@ -3429,7 +3435,7 @@ async function subirAAduino() {
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
-}  
+} 
 
 
 
